@@ -1,18 +1,23 @@
 import { useLocation } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-
+import { supabase } from '@/lib/supabase';
 
 export default function PageNotFound({}) {
     const location = useLocation();
     const pageName = location.pathname.substring(1);
 
+    // Fetch user authorization status via Supabase
     const { data: authData, isFetched } = useQuery({
         queryKey: ['user'],
         queryFn: async () => {
             try {
-                const user = await base44.auth.me();
-                return { user, isAuthenticated: true };
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) throw error;
+                
+                return { 
+                    user: session?.user || null, 
+                    isAuthenticated: !!session 
+                };
             } catch (error) {
                 return { user: null, isAuthenticated: false };
             }
@@ -35,21 +40,21 @@ export default function PageNotFound({}) {
                             Page Not Found
                         </h2>
                         <p className="text-slate-600 leading-relaxed">
-                            The page <span className="font-medium text-slate-700">"{pageName}"</span> could not be found in this application.
+                            The page <code className="px-1.5 py-0.5 bg-slate-100 text-pink-600 rounded text-sm font-mono">{pageName || 'home'}</code> doesn't exist or hasn't been implemented yet.
                         </p>
                     </div>
-                    
-                    {/* Admin Note */}
-                    {isFetched && authData.isAuthenticated && authData.user?.role === 'admin' && (
-                        <div className="mt-8 p-4 bg-slate-100 rounded-lg border border-slate-200">
-                            <div className="flex items-start space-x-3">
-                                <div className="flex-shrink-0 w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center mt-0.5">
-                                    <div className="w-2 h-2 rounded-full bg-orange-400"></div>
-                                </div>
-                                <div className="text-left space-y-1">
-                                    <p className="text-sm font-medium text-slate-700">Admin Note</p>
+
+                    {/* Developer Notice */}
+                    {authData?.isAuthenticated && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-left">
+                            <div className="flex space-x-3">
+                                <svg className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d=\"M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z\" />
+                                </svg>
+                                <div className="space-y-1">
+                                    <p className="text-sm font-medium text-blue-900">Developer Hint</p>
                                     <p className="text-sm text-slate-600 leading-relaxed">
-                                        This could mean that the AI hasn't implemented this page yet. Ask it to implement it in the chat.
+                                        This could mean that the layout router hasn't registered this component path yet. Review your routing map configurations.
                                     </p>
                                 </div>
                             </div>
@@ -65,11 +70,11 @@ export default function PageNotFound({}) {
                             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                             </svg>
-                            Go Home
+                            Back to Dashboard
                         </button>
                     </div>
                 </div>
             </div>
         </div>
-    )
+    );
 }
