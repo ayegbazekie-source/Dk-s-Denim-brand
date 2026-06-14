@@ -1,74 +1,79 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
-const AuthContext = createContext({
-  user: null,
-  session: null,
-  loading: true,
-});
+const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [authError, setAuthError] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    // 1. Get initial active login session state on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // 1. Fetch initial active user session when the application mounts
+    const initializeAuth = async () => {
+      try {
+        setIsLoadingAuth(true);
+        setAuthError(null);
 
-    // 2. Listen dynamically for auth state changes (login, logout, token refresh)
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+
+        if (session) {
+          setUser(session.user);
+          setIsAuthenticated(true);
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('User auth check failed:', error);
+        setAuthError({
+          type: 'auth_error',
+          message: error.message || 'Authentication check failed'
+        });
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoadingAuth(false);
+        setAuthChecked(true);
+      }
+    };
+
+    initializeAuth();
+
+    // 2. Set up a real-time listener for any authorization state updates (Sign In, Sign Out)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+      if (session) {
+        setUser(session.user);
+        setIsAuthenticated(true);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
     });
 
-    return () => subscription.unsubscribe();
+    // Cleanup subscription on unmount
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
   }, []);
 
-  const value = {
-    user,
-    session,
-    loading,
-    signOut: () => supabase.auth.signOut(),
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
-}
-
-export const useAuth = () => useContext(AuthContext);
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
-      }
+  // Log out function utilizing Supabase native routines
+  const logout = async () => {
+    try {
+      setIsLoadingAuth(true);
+      await supabase.auth.signOut();
+      setUser(null);
+      setIsAuthenticated(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoadingAuth(false);
     }
-  };
-
-  const logout = (shouldRedirect = true) => {
-    setUser(null);
-    setIsAuthenticated(false);
-    
-    if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
-      base44.auth.logout(window.location.href);
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
-    }
-  };
-
-  const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
   };
 
   return (
@@ -76,14 +81,9 @@ export const useAuth = () => useContext(AuthContext);
       user, 
       isAuthenticated, 
       isLoadingAuth,
-      isLoadingPublicSettings,
       authError,
-      appPublicSettings,
       authChecked,
-      logout,
-      navigateToLogin,
-      checkUserAuth,
-      checkAppState
+      logout
     }}>
       {children}
     </AuthContext.Provider>
@@ -92,7 +92,7 @@ export const useAuth = () => useContext(AuthContext);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
