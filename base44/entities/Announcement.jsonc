@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "target": {
+      "type": "string"
+    },
+    "sent_at": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "Announcement"
+}

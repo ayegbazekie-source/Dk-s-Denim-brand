@@ -1,0 +1,96 @@
+{
+  "type": "object",
+  "properties": {
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_email": {
+      "type": "string"
+    },
+    "customer_phone": {
+      "type": "string"
+    },
+    "product_id": {
+      "type": "string"
+    },
+    "product_name": {
+      "type": "string"
+    },
+    "product_category": {
+      "type": "string"
+    },
+    "size": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "quantity": {
+      "type": "number"
+    },
+    "total_amount": {
+      "type": "number"
+    },
+    "shipping_address": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "affiliate_code": {
+      "type": "string"
+    },
+    "is_custom_order": {
+      "type": "boolean"
+    },
+    "fit_preference": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "tracking_number": {
+      "type": "string"
+    },
+    "order_date": {
+      "type": "string"
+    },
+    "shoulder": {
+      "type": "string"
+    },
+    "chest": {
+      "type": "string"
+    },
+    "sleeve": {
+      "type": "string"
+    },
+    "top_length": {
+      "type": "string"
+    },
+    "neck": {
+      "type": "string"
+    },
+    "down_length": {
+      "type": "string"
+    },
+    "waist": {
+      "type": "string"
+    },
+    "hip": {
+      "type": "string"
+    },
+    "thigh": {
+      "type": "string"
+    },
+    "payment_confirmed": {
+      "type": "boolean",
+      "default": false
+    },
+    "commission_released": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [],
+  "name": "Order"
+}

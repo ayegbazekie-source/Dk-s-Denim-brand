@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "review": {
+      "type": "string"
+    },
+    "rating": {
+      "type": "number"
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "product_purchased": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string"
+    },
+    "admin_reply": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "Testimonial"
+}

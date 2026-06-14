@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "subscribed_date": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean"
+    }
+  },
+  "required": [],
+  "name": "NewsletterSubscriber"
+}

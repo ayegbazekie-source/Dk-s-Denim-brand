@@ -1,0 +1,70 @@
+{
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "price": {
+      "type": "number"
+    },
+    "category": {
+      "type": "string"
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sizes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "colors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "fabric": {
+      "type": "string"
+    },
+    "fit_type": {
+      "type": "string"
+    },
+    "stretch_level": {
+      "type": "string"
+    },
+    "stock": {
+      "type": "number"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "is_new_arrival": {
+      "type": "boolean"
+    },
+    "is_featured": {
+      "type": "boolean"
+    },
+    "care_instructions": {
+      "type": "string"
+    },
+    "styling_recommendation": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "Product"
+}
