@@ -1,0 +1,59 @@
+{
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "referral_code": {
+      "type": "string"
+    },
+    "total_clicks": {
+      "type": "number"
+    },
+    "orders_generated": {
+      "type": "number"
+    },
+    "total_earnings": {
+      "type": "number"
+    },
+    "pending_payout": {
+      "type": "number"
+    },
+    "paid_commissions": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string"
+    },
+    "bank_name": {
+      "type": "string"
+    },
+    "account_number": {
+      "type": "string"
+    },
+    "account_name": {
+      "type": "string"
+    },
+    "joined_date": {
+      "type": "string"
+    },
+    "referred_by": {
+      "type": "string"
+    },
+    "last_active_date": {
+      "type": "string"
+    },
+    "payout_requested": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [],
+  "name": "Affiliate"
+}
