@@ -28,7 +28,7 @@ export default function PageNotFound() {
                 <h1 className="text-7xl font-light text-slate-300">404</h1>
                 <h2 className="text-2xl font-medium text-slate-800">Page Not Found</h2>
                 <p className="text-slate-600">
-                    The page <code className="...">{pageName || 'home'}</code> doesn&apos;t exist.
+                    The page <code className="...">{pageName || 'home'}</code> doesn{"'"}t exist.
                 </p>
                 <button 
                     onClick={() => window.location.href = '/'} 
