@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/AuthContext";
 import AdminOverview from "../components/admin/AdminOverview";
 import AdminProducts from "../components/admin/AdminProducts";
 import AdminOrders from "../components/admin/AdminOrders";
@@ -32,6 +33,7 @@ export default function Admin() {
   const [accessDenied, setAccessDenied] = useState(false);
 
   // Password gate state
+  const { navigateToLogin } = useAuth();
   const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("dk_admin_unlocked") === "1");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -96,6 +98,9 @@ export default function Admin() {
     );
   }
 
+    // 1. Make sure you destructured navigateToLogin from useAuth() at the top of this component:
+  // const { navigateToLogin } = useAuth();
+
   if (accessDenied) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center text-center px-6">
@@ -104,7 +109,12 @@ export default function Admin() {
         </div>
         <h1 className="text-3xl font-black text-foreground mb-3">Access Denied</h1>
         <p className="text-muted-foreground mb-6">This page is for administrators only. Please log in with an admin account.</p>
-        <button onClick={() => window.location.href = "/login"} className="bg-primary text-primary-foreground font-bold px-8 py-3 rounded-full hover:scale-105 transition-all">
+        
+        {/* Updated button to trigger your native login process securely */}
+        <button 
+          onClick={() => navigateToLogin()} 
+          className="bg-primary text-primary-foreground font-bold px-8 py-3 rounded-full hover:scale-105 transition-all"
+        >
           Login as Admin
         </button>
       </div>
