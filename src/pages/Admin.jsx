@@ -60,9 +60,10 @@ export default function Admin() {
         .eq("id", user.id)
         .single();
 
-      if (profile?.role !== "admin") {
-        setAccessDenied(true);
-      }
+      // Comment out or remove the old role restriction check
+if (!profile) {
+  setAccessDenied(true);
+}
     } catch (error) {
       console.error(error);
       setAccessDenied(true);
