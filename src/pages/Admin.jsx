@@ -31,9 +31,9 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
-
-  // Password gate state
   const { navigateToLogin } = useAuth();
+  
+  // Password gate state
   const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("dk_admin_unlocked") === "1");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -41,44 +41,53 @@ export default function Admin() {
   const [pwLoading, setPwLoading] = useState(false);
 
   useEffect(() => {
-  async function getUser() {
-    try {
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setAccessDenied(true);
-        return;
-      }
-
-      setUser(user);
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      // Comment out or remove the old role restriction check
-if (!profile) {
-  setAccessDenied(true);
-}
-    } catch (error) {
-      console.error(error);
-      setAccessDenied(true);
-    } finally {
+    // CRITICAL: If the master gate hasn't been solved yet, stop here.
+    // This allows the password gate to safely render without tripping database checks.
+    if (!unlocked) {
       setLoadingUser(false);
+      return;
     }
-  }
 
-  getUser();
-}, []);
+    async function getUser() {
+      try {
+        setLoadingUser(true);
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !authUser) {
+          setAccessDenied(true);
+          return;
+        }
+
+        setUser(authUser);
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", authUser.id)
+          .single();
+
+        // Safe fallback: Allow access if the account's role is admin OR if it matches your developer email
+        if (profile?.role === "admin" || authUser.email === "dkadristailoringservice@gmail.com") {
+          setAccessDenied(false);
+        } else {
+          setAccessDenied(true);
+        }
+      } catch (error) {
+        console.error("Auth initialization check encountered an error:", error);
+        setAccessDenied(true);
+      } finally {
+        setLoadingUser(false);
+      }
+    }
+
+    getUser();
+  }, [unlocked]);
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     setPwLoading(true);
     setPwError("");
+    
     setTimeout(() => {
       if (password === ADMIN_PASSWORD) {
         sessionStorage.setItem("dk_admin_unlocked", "1");
@@ -91,37 +100,7 @@ if (!profile) {
     }, 600);
   };
 
-  if (loadingUser) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-muted border-t-primary rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-    // 1. Make sure you destructured navigateToLogin from useAuth() at the top of this component:
-  // const { navigateToLogin } = useAuth();
-
-  if (accessDenied) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center text-center px-6">
-        <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
-          <Shield className="h-10 w-10 text-destructive" />
-        </div>
-        <h1 className="text-3xl font-black text-foreground mb-3">Access Denied</h1>
-        <p className="text-muted-foreground mb-6">This page is for administrators only. Please log in with an admin account.</p>
-        
-        {/* Updated button to trigger your native login process securely */}
-        <button 
-          onClick={() => navigateToLogin()} 
-          className="bg-primary text-primary-foreground font-bold px-8 py-3 rounded-full hover:scale-105 transition-all"
-        >
-          Login as Admin
-        </button>
-      </div>
-    );
-  }
-
+  // SCREEN CHECK 1: Render the Identity Verification Gate upfront if locked
   if (!unlocked) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -137,6 +116,7 @@ if (!profile) {
             <h1 className="text-3xl font-black text-foreground tracking-tight">D-Kadris Admin</h1>
             <p className="text-muted-foreground text-sm mt-1">Secure Administrative Gateway</p>
           </div>
+
           <div className="bg-card border border-border rounded-2xl p-8 shadow-2xl">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -185,6 +165,45 @@ if (!profile) {
     );
   }
 
+  // SCREEN CHECK 2: Show loading loop spin state if database is loading session
+  if (loadingUser) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-muted border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // SCREEN CHECK 3: Run the database safety block if authenticated account is not an admin
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center text-center px-6">
+        <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
+          <Shield className="h-10 w-10 text-destructive" />
+        </div>
+        <h1 className="text-3xl font-black text-foreground mb-3">Access Denied</h1>
+        <p className="text-muted-foreground mb-6">This page is for administrators only. Please log in with an admin account.</p>
+        <button 
+          onClick={() => navigateToLogin()} 
+          className="bg-primary text-primary-foreground font-bold px-8 py-3 rounded-full hover:scale-105 transition-all mb-4"
+        >
+          Login as Admin
+        </button>
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut();
+            sessionStorage.removeItem("dk_admin_unlocked");
+            setUnlocked(false);
+            setAccessDenied(false);
+          }}
+          className="text-xs font-semibold text-muted-foreground hover:text-foreground underline transition-all"
+        >
+          Return to Password Gate
+        </button>
+      </div>
+    );
+  }
+
   const ActiveComponent = {
     overview: AdminOverview,
     products: AdminProducts,
@@ -196,14 +215,13 @@ if (!profile) {
     settings: AdminSettings,
   }[activeTab];
 
+  // MAIN RENDER: Render the official Admin Panel UI layout securely
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-background/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-full w-64 bg-card border-r border-border z-50 flex flex-col transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:z-auto`}>
         <div className="p-6 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -233,26 +251,24 @@ if (!profile) {
         <div className="p-4 border-t border-border">
           <div className="flex items-center gap-3 px-3 py-3 mb-2">
             <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
-              <span className="text-accent font-black text-sm">{user?.full_name?.[0] || "A"}</span>
+              <span className="text-accent font-black text-sm">{user?.email?.[0]?.toUpperCase() || "A"}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-card-foreground text-sm font-bold truncate">{user?.full_name || "Admin"}</p>
+              <p className="text-card-foreground text-sm font-bold truncate">Admin Session</p>
               <p className="text-muted-foreground text-xs truncate">{user?.email}</p>
             </div>
           </div>
           <button onClick={async () => {
-  await supabase.auth.signOut();
-  sessionStorage.removeItem("dk_admin_unlocked");
-  window.location.href = "/";
-}} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-destructive/80 hover:bg-destructive/10 hover:text-destructive transition-all">
+            await supabase.auth.signOut();
+            sessionStorage.removeItem("dk_admin_unlocked");
+            window.location.href = "/";
+          }} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-destructive/80 hover:bg-destructive/10 hover:text-destructive transition-all">
             <LogOut className="h-4 w-4" /> Sign Out
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
         <div className="bg-card border-b border-border px-6 py-4 flex items-center gap-4 sticky top-0 z-30">
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-card-foreground hover:text-foreground">
             <Menu className="h-5 w-5" />
@@ -263,11 +279,11 @@ if (!profile) {
           </div>
         </div>
 
-        {/* Page */}
         <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="flex-1 p-6 overflow-y-auto">
           {ActiveComponent && <ActiveComponent />}
         </motion.div>
       </div>
     </div>
   );
-}
+                    }
+                               
