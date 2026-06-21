@@ -60,14 +60,20 @@ export default function Admin() {
 
         setUser(authUser);
 
+        // FIRST CHECK: If it's your exact email, let you in immediately without needing the profile table!
+        if (authUser.email === "dkadristailoringservice@gmail.com") {
+          setAccessDenied(false);
+          return;
+        }
+
+        // SECOND CHECK: Fallback to the profiles table for other admin accounts
         const { data: profile } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", authUser.id)
           .single();
 
-        // Safe fallback: Allow access if the account's role is admin OR if it matches your developer email
-        if (profile?.role === "admin" || authUser.email === "dkadristailoringservice@gmail.com") {
+        if (profile?.role === "admin") {
           setAccessDenied(false);
         } else {
           setAccessDenied(true);
@@ -82,23 +88,7 @@ export default function Admin() {
 
     getUser();
   }, [unlocked]);
-
-  const handlePasswordSubmit = (e) => {
-    e.preventDefault();
-    setPwLoading(true);
-    setPwError("");
-    
-    setTimeout(() => {
-      if (password === ADMIN_PASSWORD) {
-        sessionStorage.setItem("dk_admin_unlocked", "1");
-        setUnlocked(true);
-      } else {
-        setPwError("Unauthorized Access — Incorrect password. This attempt has been logged.");
-        setPassword("");
-      }
-      setPwLoading(false);
-    }, 600);
-  };
+  
 
   // SCREEN CHECK 1: Render the Identity Verification Gate upfront if locked
   if (!unlocked) {
