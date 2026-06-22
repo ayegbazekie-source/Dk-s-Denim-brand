@@ -53,6 +53,23 @@ export default function Admin() {
     setLoadingUser(false);
 
   }, [unlocked]);
+    const handlePasswordSubmit = (e) => {
+    e.preventDefault();
+    setPwLoading(true);
+    setPwError("");
+    
+    setTimeout(() => {
+      if (password === ADMIN_PASSWORD) {
+        sessionStorage.setItem("dk_admin_unlocked", "1");
+        setUnlocked(true);
+        setAccessDenied(false); // Make sure access denied is cleared instantly!
+      } else {
+        setPwError("Unauthorized Access — Incorrect password. This attempt has been logged.");
+        setPassword("");
+      }
+      setPwLoading(false);
+    }, 600);
+  };
 
   // SCREEN CHECK 1: Render the Identity Verification Gate upfront if locked
   if (!unlocked) {
