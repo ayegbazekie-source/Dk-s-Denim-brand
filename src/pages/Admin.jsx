@@ -40,55 +40,19 @@ export default function Admin() {
   const [pwError, setPwError] = useState("");
   const [pwLoading, setPwLoading] = useState(false);
 
-  useEffect(() => {
+    useEffect(() => {
     // CRITICAL: If the master gate hasn't been solved yet, stop here.
-    // This allows the password gate to safely render without tripping database checks.
     if (!unlocked) {
       setLoadingUser(false);
       return;
     }
 
-    async function getUser() {
-      try {
-        setLoadingUser(true);
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    // Bypass the database completely and grant immediate entry 
+    // since the master password gate was solved successfully.
+    setAccessDenied(false);
+    setLoadingUser(false);
 
-        if (authError || !authUser) {
-          setAccessDenied(true);
-          return;
-        }
-
-        setUser(authUser);
-
-        // FIRST CHECK: If it's your exact email, let you in immediately without needing the profile table!
-        if (authUser.email === "dkadristailoringservice@gmail.com") {
-          setAccessDenied(false);
-          return;
-        }
-
-        // SECOND CHECK: Fallback to the profiles table for other admin accounts
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", authUser.id)
-          .single();
-
-        if (profile?.role === "admin") {
-          setAccessDenied(false);
-        } else {
-          setAccessDenied(true);
-        }
-      } catch (error) {
-        console.error("Auth initialization check encountered an error:", error);
-        setAccessDenied(true);
-      } finally {
-        setLoadingUser(false);
-      }
-    }
-
-    getUser();
   }, [unlocked]);
-  
 
   // SCREEN CHECK 1: Render the Identity Verification Gate upfront if locked
   if (!unlocked) {
