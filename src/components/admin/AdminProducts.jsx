@@ -11,11 +11,19 @@ const badgeColor = {
   standard: "text-muted-foreground bg-muted border border-border",
 };
 
+// Multi-tier structural mapping config
+const CATEGORY_MAP = {
+  DENIM: ["Jackets", "Jeans", "Cargo", "Shorts", "Jumpsuits"],
+  NATIVE: ["Senators", "Agbada", "Kaftans", "Caps"],
+  CORPORATE: ["Suits", "Blazers", "Trousers", "Shirts"]
+};
+
 const initialFormState = {
   name: "",
   price: "",
   stock: "",
-  category: "Jeans",
+  category: "", // Reset to empty default to force valid parent selection
+  subcategory: "", // Added multi-tier tracking row state
   fit_type: "",
   fabric: "",
   stretch_level: "",
@@ -62,6 +70,15 @@ export default function AdminProducts() {
 
   useEffect(() => { load(); }, []);
 
+  // Safe reset for child rows on parent category shifts
+  const handleCategoryFormChange = (newCategory) => {
+    setFormData((prev) => ({
+      ...prev,
+      category: newCategory,
+      subcategory: "" // Safely strip old selections to prevent mapping cross-contamination
+    }));
+  };
+
   // AUTOMATED PHONE GALLERY UPLOADER ROUTINE
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -106,6 +123,7 @@ export default function AdminProducts() {
       price: parseFloat(formData.price) || 0,
       stock: parseInt(formData.stock) || 0,
       category: formData.category,
+      subcategory: formData.subcategory || null, // Structural parsing insertion payload
       fit_type: formData.fit_type || null,
       fabric: formData.fabric || null,
       stretch_level: formData.stretch_level || null,
@@ -153,7 +171,8 @@ export default function AdminProducts() {
       name: product.name || "",
       price: product.price || "",
       stock: product.stock || "",
-      category: product.category || "Jeans",
+      category: product.category || "",
+      subcategory: product.subcategory || "",
       fit_type: product.fit_type || "",
       fabric: product.fabric || "",
       stretch_level: product.stretch_level || "",
@@ -184,7 +203,8 @@ export default function AdminProducts() {
   const filtered = products.filter(p =>
     !search ||
     p.name?.toLowerCase().includes(search.toLowerCase()) ||
-    p.category?.toLowerCase().includes(search.toLowerCase())
+    p.category?.toLowerCase().includes(search.toLowerCase()) ||
+    p.subcategory?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -193,7 +213,7 @@ export default function AdminProducts() {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..." className="pl-9 bg-muted border-border text-card-foreground rounded-full" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products or subcategories..." className="pl-9 bg-muted border-border text-card-foreground rounded-full" />
         </div>
         
         <Button 
@@ -214,7 +234,8 @@ export default function AdminProducts() {
           <thead>
             <tr className="text-muted-foreground text-xs uppercase tracking-wide border-b border-border bg-muted/30">
               <th className="text-left p-4">Product</th>
-              <th className="text-left p-4">Category</th>
+              <th className="text-left p-4">Main Category</th>
+              <th className="text-left p-4">Subcategory</th>
               <th className="text-left p-4">Price</th>
               <th className="text-left p-4">Stock</th>
               <th className="text-left p-4">Badges</th>
@@ -233,13 +254,14 @@ export default function AdminProducts() {
                         <Package className="h-5 w-5 text-muted-foreground/50" />
                       )}
                     </div>
-                    <div className="max-w-[200px] sm:max-w-xs">
+                    <div className="max-w-[180px] sm:max-w-xs">
                       <p className="font-bold truncate">{p.name}</p>
                       <p className="text-muted-foreground text-xs truncate">{p.description}</p>
                     </div>
                   </div>
                 </td>
-                <td className="p-4 capitalize font-medium text-muted-foreground">{p.category || "Jeans"}</td>
+                <td className="p-4 uppercase font-bold text-xs tracking-wider text-muted-foreground">{p.category || "Unassigned"}</td>
+                <td className="p-4 capitalize font-medium text-foreground">{p.subcategory || "—"}</td>
                 <td className="p-4 font-bold text-primary">₦{(Number(p.price) || 0).toLocaleString()}</td>
                 <td className="p-4 font-medium">{p.stock ?? 0} pcs</td>
                 <td className="p-4">
@@ -265,7 +287,7 @@ export default function AdminProducts() {
               </tr>
             ))}
             {filtered.length === 0 && !loading && (
-              <tr><td colSpan={6} className="py-12 text-center text-muted-foreground"><Package className="h-10 w-10 mx-auto mb-2 opacity-30" />No products found</td></tr>
+              <tr><td colSpan={7} className="py-12 text-center text-muted-foreground"><Package className="h-10 w-10 mx-auto mb-2 opacity-30" />No products found</td></tr>
             )}
           </tbody>
         </table>
@@ -295,30 +317,48 @@ export default function AdminProducts() {
               </div>
             </div>
 
+            {/* Structured Multi-tier Layout Row Input Fields */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Category</label>
-                <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full h-10 px-3 bg-muted border border-border rounded-md text-sm text-card-foreground focus:outline-none">
-                  {['Jackets', 'Jeans', 'Cargo', 'Shirts', 'Shorts', 'Jumpsuits'].map(cat => (
+                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Main Category</label>
+                <select required value={formData.category} onChange={e => handleCategoryFormChange(e.target.value)} className="w-full h-10 px-3 bg-muted border border-border rounded-md text-sm text-card-foreground focus:outline-none font-bold">
+                  <option value="" disabled>Select Parent...</option>
+                  {['DENIM', 'NATIVE', 'CORPORATE'].map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Fit Type</label>
-                <Input value={formData.fit_type} onChange={e => setFormData({...formData, fit_type: e.target.value})} placeholder="Slim Fit, Regular, Boxy" className="bg-muted border-border" />
+                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Subcategory Type</label>
+                <select 
+                  required
+                  disabled={!formData.category}
+                  value={formData.subcategory} 
+                  onChange={e => setFormData({...formData, subcategory: e.target.value})} 
+                  className="w-full h-10 px-3 bg-muted border border-border rounded-md text-sm text-card-foreground focus:outline-none disabled:opacity-50"
+                >
+                  <option value="" disabled>Choose specificity...</option>
+                  {formData.category && CATEGORY_MAP[formData.category]?.map(sub => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
+                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Fit Type</label>
+                <Input value={formData.fit_type} onChange={e => setFormData({...formData, fit_type: e.target.value})} placeholder="Slim Fit, Regular, Boxy" className="bg-muted border-border" />
+              </div>
+              <div>
                 <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Fabric</label>
                 <Input value={formData.fabric} onChange={e => setFormData({...formData, fabric: e.target.value})} placeholder="Raw Denim, 100% Cotton Stretch" className="bg-muted border-border" />
               </div>
-              <div>
-                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Stretch Level</label>
-                <Input value={formData.stretch_level} onChange={e => setFormData({...formData, stretch_level: e.target.value})} placeholder="Non-Stretch, Medium Stretch" className="bg-muted border-border" />
-              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Stretch Level</label>
+              <Input value={formData.stretch_level} onChange={e => setFormData({...formData, stretch_level: e.target.value})} placeholder="Non-Stretch, Medium Stretch" className="bg-muted border-border" />
             </div>
 
             {/* GALLERIES UPLOADER BUTTON COMPONENT */}
@@ -384,7 +424,7 @@ export default function AdminProducts() {
 
             <div>
               <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Styling Recommendation</label>
-              <Input value={formData.styling_recommendation} onChange={e => setFormData({...formData, styling_recommendation: e.target.value})} placeholder="Pairs best with D-Kadris Raw Hem Shorts" className="bg-muted border-border" />
+              <Input value={formData.styling_recommendation} onChange={e => setFormData({...formData, styling_recommendation: e.target.value})} placeholder="Pairs best with D-Kadris Pieces" className="bg-muted border-border" />
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
@@ -406,7 +446,8 @@ export default function AdminProducts() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 {[
                   ["Name", selected.name],
-                  ["Category", selected.category],
+                  ["Main Category", selected.category],
+                  ["Subcategory", selected.subcategory],
                   ["Price", `₦${(Number(selected.price) || 0).toLocaleString()}`],
                   ["Stock Count", `${selected.stock ?? 0} items`],
                   ["Fabric Type", selected.fabric],
