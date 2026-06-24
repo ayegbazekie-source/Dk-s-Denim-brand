@@ -73,6 +73,7 @@ export default function Catalog() {
   const [jeansLength, setJeansLength] = useState("");
   const [customNotes, setCustomNotes] = useState("");
   const [orderDone, setOrderDone] = useState(false);
+  const [affiliateCode, setAffiliateCode] = useState("");
 
   // Reset subcategory on parent category switches
   const handleCategoryChange = (category) => {
@@ -128,6 +129,7 @@ export default function Catalog() {
             thigh,
             jeans_length: jeansLength,
             notes: customNotes,
+            affiliate_code: affiliateCode, // Integrated tracking mapping variable
             order_date: new Date().toISOString()
           }
         ]);
@@ -151,13 +153,14 @@ export default function Catalog() {
       qty: qty,
       size: activeTab === "custom" ? "Custom Tailored" : chosenSize,
       color: activeTab === "custom" ? "Bespoke Selection" : chosenColor,
+      affiliateCode: affiliateCode
     };
 
     setCartItems(prev => [...prev, newItem]);
     setSelectedProduct(null);
     setCartOpen(true);
     // Reset selection inputs
-    setQty(1); setChosenSize(""); setChosenColor("");
+    setQty(1); setChosenSize(""); setChosenColor(""); setAffiliateCode("");
   };
 
   const toggleFav = (id) => setFavorites(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
@@ -198,7 +201,6 @@ export default function Catalog() {
               <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search jeans, jackets, native attires..." className="pl-10 bg-background border-border rounded-xl h-11" />
             </div>
             
-            {/* Primary Parent Categories matching Screenshot_20260624-002630_3.jpg */}
             <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
               {["ALL", "DENIM", "NATIVE", "CORPORATE"].map(c => (
                 <Button key={c} variant={selectedCategory === c ? "default" : "outline"} onClick={() => handleCategoryChange(c)} className="rounded-xl font-bold text-xs tracking-wider h-11 px-5 flex-shrink-0">
@@ -284,13 +286,13 @@ export default function Catalog() {
                     <span className="text-foreground font-heading font-extrabold text-xl">₦{(product.price || 0).toLocaleString()}</span>
                     <Dialog open={selectedProduct?.id === product.id} onOpenChange={(isOpen) => { if(isOpen) { setSelectedProduct(product); setImageIndex(0); setOrderDone(false); } else { setSelectedProduct(null); } }}>
                       <DialogTrigger asChild>
-                        <Button className="bg-primary text-primary-foreground font-bold text-xs rounded-xl px-4 py-2 hover:bg-accent hover:text-accent-foreground transition-all duration-300">Configure Fit</Button>
+                        <Button className="bg-primary text-primary-foreground font-bold text-xs rounded-xl px-4 py-2 hover:bg-accent hover:text-accent-foreground transition-all duration-300">Quick View</Button>
                       </DialogTrigger>
                       <DialogContent className="bg-background border-border max-w-4xl w-[95vw] h-[90vh] sm:h-[85vh] flex flex-col p-0 overflow-hidden text-foreground">
                         {selectedProduct && (
                           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                             {/* Left Media Slider */}
-                            <div className="w-full md:w-1/2 bg-muted relative flex-shrink-0 min-h-[250px] md:h-full">
+                            <div className="w-full md:w-1/2 bg-muted relative flex-shrink-0 min-h-[200px] md:h-full max-h-[30vh] md:max-h-full">
                               <img src={Array.isArray(selectedProduct.images) && selectedProduct.images.length > 0 ? selectedProduct.images[imageIndex] : selectedProduct.image_url} alt={selectedProduct.name} className="w-full h-full object-cover" />
                               {Array.isArray(selectedProduct.images) && selectedProduct.images.length > 1 && (
                                 <>
@@ -313,12 +315,12 @@ export default function Catalog() {
                                   <TabsTrigger value="custom" className="rounded-lg font-bold text-xs tracking-wider">Bespoke Fitting</TabsTrigger>
                                 </TabsList>
 
-                                <TabsContent value="ready" className="space-y-5 mt-0 flex-1">
+                                <TabsContent value="ready" className="space-y-5 mt-0 flex-1 flex flex-col">
                                   <div className="space-y-2">
                                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Select Structural Size</Label>
                                     <div className="flex flex-wrap gap-2">
                                       {(Array.isArray(selectedProduct.sizes) ? selectedProduct.sizes : ["30", "32", "34", "36", "38", "M", "L", "XL"]).map(s => (
-                                        <button key={s} onClick={() => setChosenSize(s)} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-all ${chosenSize === s ? "bg-accent border-accent text-accent-foreground shadow-sm" : "bg-background border-border text-foreground hover:bg-muted"}`}>{s}</button>
+                                        <button key={s} type="button" onClick={() => setChosenSize(s)} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-all ${chosenSize === s ? "bg-accent border-accent text-accent-foreground shadow-sm" : "bg-background border-border text-foreground hover:bg-muted"}`}>{s}</button>
                                       ))}
                                     </div>
                                   </div>
@@ -326,16 +328,21 @@ export default function Catalog() {
                                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Select Finish / Color</Label>
                                     <div className="flex flex-wrap gap-2">
                                       {(Array.isArray(selectedProduct.colors) ? selectedProduct.colors : ["Indigo Blue", "Raw Black", "Stone Wash", "Charcoal Grey"]).map(c => (
-                                        <button key={c} onClick={() => setChosenColor(c)} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-all ${chosenColor === c ? "bg-accent border-accent text-accent-foreground shadow-sm" : "bg-background border-border text-foreground hover:bg-muted"}`}>{c}</button>
+                                        <button key={c} type="button" onClick={() => setChosenColor(c)} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-all ${chosenColor === c ? "bg-accent border-accent text-accent-foreground shadow-sm" : "bg-background border-border text-foreground hover:bg-muted"}`}>{c}</button>
                                       ))}
                                     </div>
                                   </div>
-                                  <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quantity</Label><div className="flex items-center gap-3 border border-border w-max rounded-xl p-1 bg-background">
-                                      <button onClick={() => setQty(p => Math.max(1, p - 1))} className="w-8 h-8 flex items-center justify-center hover:bg-muted rounded-lg font-bold text-lg">-</button>
+                      <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quantity</Label>
+                                    <div className="flex items-center gap-3 border border-border w-max rounded-xl p-1 bg-background">
+                                      <button type="button" onClick={() => setQty(p => Math.max(1, p - 1))} className="w-8 h-8 flex items-center justify-center hover:bg-muted rounded-lg font-bold text-lg">-</button>
                                       <span className="w-8 text-center font-bold text-sm">{qty}</span>
-                                      <button onClick={() => setQty(p => p + 1)} className="w-8 h-8 flex items-center justify-center hover:bg-muted rounded-lg font-bold text-lg">+</button>
+                                      <button type="button" onClick={() => setQty(p => p + 1)} className="w-8 h-8 flex items-center justify-center hover:bg-muted rounded-lg font-bold text-lg">+</button>
                                     </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Affiliate Code (Optional)</Label>
+                                    <Input value={affiliateCode} onChange={e => setAffiliateCode(e.target.value)} placeholder="e.g. PARTNER10" className="bg-background border-border rounded-lg h-9 text-sm" />
                                   </div>
                                   <Button onClick={addToCart} disabled={!chosenSize || !chosenColor} className="w-full bg-accent text-accent-foreground font-black py-6 rounded-full text-xs tracking-widest uppercase shadow-lg mt-auto">Add to Cart Bag</Button>
                                 </TabsContent>
@@ -346,17 +353,17 @@ export default function Catalog() {
                                       <div className="w-12 h-12 bg-accent text-accent-foreground rounded-full flex items-center justify-center mb-3"><Check className="h-6 w-6" /></div>
                                       <h4 className="font-heading font-bold text-lg text-foreground mb-1">Tailoring Profile Created!</h4>
                                       <p className="text-muted-foreground text-xs max-w-sm px-4 mb-4">Your specific dimensions have been recorded. Our master tailor will review your profile instantly.</p>
-                                      <a href={`https://wa.me/2348163914835?text=Hello D-Kadris, I placed a bespoke tailoring order for ${selectedProduct.name}. My name is ${custName}.`} target="_blank" rel="noopener noreferrer">
+                                      <a href={`https://wa.me/2348163914835?text=Hello D-Kadris, I placed a bespoke tailoring order for ${selectedProduct.name}. My name is ${custName}.${affiliateCode ? ` Affiliate Code: ${affiliateCode}` : ""}`} target="_blank" rel="noopener noreferrer">
                                         <Button className="bg-accent text-accent-foreground font-bold text-xs rounded-full px-6 py-2"><MessageCircle className="h-4 w-4 mr-2" /> Complete via WhatsApp</Button>
                                       </a>
                                     </div>
                                   ) : (
                                     <form onSubmit={handleCustomOrderSubmit} className="space-y-4 flex-1 flex flex-col">
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="space-y-1"><Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Full Name *</Label><Input required value={custName} onChange={e=>setCustName(e.target.value)} placeholder="Ezekiel Kadiri" className="bg-background border-border rounded-lg h-9 text-sm" /></div>
-                                        <div className="space-y-1"><Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Phone Number *</Label><Input required value={custPhone} onChange={e=>setCustPhone(e.target.value)} placeholder="0816 391 4835" className="bg-background border-border rounded-lg h-9 text-sm" /></div>
+                                        <div className="space-y-1"><Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Full Name *</Label><Input required value={custName} onChange={e=>setCustName(e.target.value)} placeholder="Musa Ibrahim" className="bg-background border-border rounded-lg h-9 text-sm" /></div>
+                                        <div className="space-y-1"><Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Phone Number *</Label><Input required value={custPhone} onChange={e=>setCustPhone(e.target.value)} placeholder="0803 xxxx 789" className="bg-background border-border rounded-lg h-9 text-sm" /></div>
                                       </div>
-                                      <div className="space-y-1"><Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Email Address</Label><Input type="email" value={custEmail} onChange={e=>setCustEmail(e.target.value)} placeholder="client@dkadris.com" className="bg-background border-border rounded-lg h-9 text-sm" /></div>
+                                      <div className="space-y-1"><Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Email Address</Label><Input type="email" value={custEmail} onChange={e=>setCustEmail(e.target.value)} placeholder="client@example.com" className="bg-background border-border rounded-lg h-9 text-sm" /></div>
                                       <div className="space-y-1">
                                         <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Fit Mapping Preference</Label>
                                         <Select value={fitPref} onValueChange={setFitPref}>
@@ -370,7 +377,7 @@ export default function Catalog() {
                                       </div>
 
                                       <div className="border border-border/50 bg-muted/30 rounded-xl p-3.5">
-                                        <span className="block text-[11px] font-black uppercase tracking-widest text-accent mb-3">Anatomical Parameters (Inches)</span>
+                                        <span className="block text-[11px] font-black uppercase tracking-widest text-accent mb-3">Measurement Data (Inches)</span>
                                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                                           <div className="space-y-1"><Label className="text-[10px] font-medium text-muted-foreground">Shoulder</Label><Input value={shoulder} onChange={e=>setShoulder(e.target.value)} placeholder="18" className="bg-background border-border rounded-lg h-8 text-xs text-center" /></div>
                                           <div className="space-y-1"><Label className="text-[10px] font-medium text-muted-foreground">Chest</Label><Input value={chest} onChange={e=>setChest(e.target.value)} placeholder="40" className="bg-background border-border rounded-lg h-8 text-xs text-center" /></div>
@@ -383,7 +390,13 @@ export default function Catalog() {
                                       </div>
 
                                       <div className="space-y-1"><Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Styling Variations / Specific Instructions</Label><Textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} placeholder="Describe specific cuts, pockets style variations, contrast thread preferences..." className="bg-background border-border rounded-xl text-xs h-16 resize-none" /></div>
-                                      <Button type="submit" className="w-full bg-accent text-accent-foreground font-black py-5 rounded-full text-xs tracking-widest uppercase shadow-lg mt-auto">Lock Bespoke Order Profile</Button>
+                                      
+                                      <div className="space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Affiliate Code (Optional)</Label>
+                                        <Input value={affiliateCode} onChange={e => setAffiliateCode(e.target.value)} placeholder="e.g. PARTNER10" className="bg-background border-border rounded-lg h-9 text-sm" />
+                                      </div>
+
+                                      <Button type="submit" className="w-full bg-accent text-accent-foreground font-black py-5 rounded-full text-xs tracking-widest uppercase shadow-lg mt-auto">Order Now</Button>
                                     </form>
                                   )}
                                 </TabsContent>
@@ -418,6 +431,7 @@ export default function Catalog() {
                       <div className="flex-1">
                         <h4 className="font-heading font-bold text-sm text-foreground line-clamp-1">{item.name}</h4>
                         <p className="text-[11px] text-muted-foreground mt-0.5">Size: {item.size} | Color: {item.color}</p>
+                        {item.affiliateCode && <p className="text-[10px] text-accent">Affiliate: {item.affiliateCode}</p>}
                         <span className="text-accent font-heading font-bold text-sm block mt-1">₦{(item.price || 0).toLocaleString()} x {item.qty}</span>
                       </div>
                       <button onClick={() => setCartItems(p => p.filter((_, j) => j !== i))} className="text-muted-foreground/50 hover:text-foreground p-1"><X className="h-4 w-4" /></button>
@@ -431,7 +445,7 @@ export default function Catalog() {
                     <span>Total Subtotal</span>
                     <span className="text-accent">₦{cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}</span>
                   </div>
-                  <a href={`https://wa.me/2348163914835?text=Hello D-Kadris, I want to checkout the following from my cart:\n\n${cartItems.map(i => `- ${i.name} (${i.size}, ${i.color}) x${i.qty}`).join("\n")}\n\nTotal: ₦${cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}`} target="_blank" rel="noopener noreferrer">
+                  <a href={`https://wa.me/2348163914835?text=Hello D-Kadris, I want to checkout the following from my cart:\n\n${cartItems.map(i => `- ${i.name} (${i.size}, ${i.color}) x${i.qty}${i.affiliateCode ? ` [Code: ${i.affiliateCode}]` : ""}`).join("\n")}\n\nTotal: ₦${cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}`} target="_blank" rel="noopener noreferrer">
                     <Button className="w-full bg-accent text-accent-foreground font-black rounded-full py-6 tracking-widest uppercase text-xs shadow-lg hover:scale-[1.02] transition-all">
                       <MessageCircle className="mr-2 h-4 w-4" /> Checkout via WhatsApp
                     </Button>
@@ -450,4 +464,4 @@ export default function Catalog() {
       </div>
     </div>
   );
-                    }
+                                        }
