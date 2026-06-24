@@ -73,6 +73,7 @@ export default function Catalog() {
   const [customNotes, setCustomNotes] = useState("");
   const [orderDone, setOrderDone] = useState(false);
   const [affiliateCode, setAffiliateCode] = useState("");
+  const [dbSubmitting, setDbSubmitting] = useState(false);
 
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
@@ -95,56 +96,74 @@ export default function Catalog() {
     fetchProducts();
   }, []);
 
-  // Handles Bespoke form integration into Cart Flow
-  const handleCustomOrderSubmit = (e) => {
+  // FLOW STEP 1: Ready-to-wear "Add to Cart" button redirects into the Bespoke panel
+  const handleProceedToBespoke = (e) => {
+    e.preventDefault();
+    if (!chosenSize || !chosenColor) return;
+    setActiveTab("custom"); 
+  };
+
+  // FLOW STEP 2: Submission pushes data to Supabase orders table and stores one clean item in state
+  const handleCustomOrderSubmit = async (e) => {
     e.preventDefault();
     if (!custName || !custPhone) return;
 
-    const newItem = {
-      id: selectedProduct.id,
-      name: selectedProduct.name,
-      price: selectedProduct.price,
-      img: selectedProduct.image_url,
-      qty: 1,
-      size: "Bespoke Custom",
-      color: `Fit: ${fitPref}`,
-      affiliateCode: affiliateCode,
-      isCustom: true,
-      measurements: {
-        client: custName,
-        phone: custPhone,
-        shoulder, chest, sleeve, topLength, waist, thigh, jeansLength,
-        notes: customNotes
-      }
-    };
+    setDbSubmitting(true);
+    const calculatedTotal = (selectedProduct.price || 0) * qty;
 
-    setCartItems(prev => [...prev, newItem]);
-    setOrderDone(true);
-    
-    // Clear custom form fields safely
-    setCustName(""); setCustPhone(""); setCustEmail(""); setCustomNotes("");
-  };
-
-  const addToCart = () => {
-    if (!selectedProduct) return;
-    if (activeTab === "ready" && (!chosenSize || !chosenColor)) return;
-
-    const newItem = {
+    const unifiedItem = {
       id: selectedProduct.id,
       name: selectedProduct.name,
       price: selectedProduct.price,
       img: selectedProduct.image_url,
       qty: qty,
-      size: chosenSize,
-      color: chosenColor,
+      size: chosenSize, 
+      color: chosenColor, 
       affiliateCode: affiliateCode,
-      isCustom: false
+      isCustom: true,
+      fitPreference: fitPref,
+      measurements: {
+        client: custName,
+        phone: custPhone,
+        email: custEmail,
+        shoulder, chest, sleeve, topLength, waist, thigh, jeansLength,
+        notes: customNotes
+      }
     };
 
-    setCartItems(prev => [...prev, newItem]);
-    setSelectedProduct(null);
-    setCartOpen(true);
-    setQty(1); setChosenSize(""); setChosenColor(""); setAffiliateCode("");
+    try {
+      // Direct write into Supabase to populate your Admin order dashboard instantly
+      const { error } = await supabase.from("orders").insert([
+        {
+          customer_name: custName,
+          customer_phone: custPhone,
+          customer_email: custEmail,
+          total_price: calculatedTotal,
+          status: "Pending",
+          items: [unifiedItem], 
+          created_at: new Date().toISOString()
+        }
+      ]);
+
+      if (error) throw error;
+
+      // Filter out any previous variations of this product code to prevent duplicate cart entries
+      setCartItems(prev => {
+        const cleaned = prev.filter(item => item.id !== selectedProduct.id);
+        return [...cleaned, unifiedItem];
+      });
+      
+      setOrderDone(true);
+
+      // Clean down forms safely
+      setCustName(""); setCustPhone(""); setCustEmail(""); setCustomNotes("");
+      setShoulder(""); setChest(""); setSleeve(""); setTopLength(""); setWaist(""); setThigh(""); setJeansLength("");
+      setChosenSize(""); setChosenColor(""); setQty(1); setAffiliateCode("");
+    } catch (err) {
+      console.error("Database connection panel error:", err.message);
+    } finally {
+      setDbSubmitting(false);
+    }
   };
 
   const toggleFav = (id) => setFavorites(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
@@ -249,22 +268,19 @@ export default function Catalog() {
                   {product.is_new_arrival && <Badge className="absolute top-3 left-3 bg-amber-500 text-slate-950 font-black text-[9px] tracking-widest uppercase px-2 py-0.5 rounded-md">New</Badge>}
                 </div>
                 
-                {/* Content Box with solid high contrast visibility rules */}
                 <div className="p-3.5 flex flex-col flex-1 bg-white">
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-amber-600 text-[10px] font-black tracking-widest uppercase">{product.category}</span>
                     {product.subcategory && <span className="text-slate-900 text-[10px] font-bold uppercase">• {product.subcategory}</span>}
                   </div>
                   
-                  {/* Fixed product name typography */}
                   <h3 className="font-bold text-slate-950 text-sm sm:text-base tracking-tight mb-1 line-clamp-1">{product.name}</h3>
                   <p className="text-slate-600 text-xs line-clamp-2 mb-3 min-h-[2rem]">{product.description}</p>
                   
                   <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 mt-auto">
-                    {/* Fixed Product price typography */}
                     <span className="text-amber-600 font-extrabold text-base sm:text-lg">₦{(product.price || 0).toLocaleString()}</span>
                     
-                    <Dialog open={selectedProduct?.id === product.id} onOpenChange={(isOpen) => { if(isOpen) { setSelectedProduct(product); setImageIndex(0); setOrderDone(false); } else { setSelectedProduct(null); } }}>
+                    <Dialog open={selectedProduct?.id === product.id} onOpenChange={(isOpen) => { if(isOpen) { setSelectedProduct(product); setImageIndex(0); setOrderDone(false); setActiveTab("ready"); } else { setSelectedProduct(null); } }}>
                       <DialogTrigger asChild>
                         <Button className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl h-9 px-3 sm:px-4 transition-all">Quick View</Button>
                       </DialogTrigger>
@@ -283,9 +299,9 @@ export default function Catalog() {
                               </DialogHeader>
 
                               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col">
-                                <TabsList className="grid grid-cols-2 w-full bg-[#091324] border border-slate-800 rounded-xl p-1 mb-5">
-                                  <TabsTrigger value="ready" className="rounded-lg font-bold text-xs tracking-wider">Ready-To-Wear</TabsTrigger>
-                                  <TabsTrigger value="custom" className="rounded-lg font-bold text-xs tracking-wider">Bespoke Fitting</TabsTrigger>
+                                <TabsList className="grid grid-cols-2 w-full bg-[#091324] border border-slate-800 rounded-xl p-1 mb-5 pointer-events-none">
+                                  <TabsTrigger value="ready" className="rounded-lg font-bold text-xs tracking-wider">1. Base Selection</TabsTrigger>
+                                  <TabsTrigger value="custom" className="rounded-lg font-bold text-xs tracking-wider">2. Bespoke Details</TabsTrigger>
                                 </TabsList>
 
                                 <TabsContent value="ready" className="space-y-4 flex-1 flex flex-col">
@@ -300,7 +316,7 @@ export default function Catalog() {
                                   <div className="space-y-1.5">
                                     <Label className="text-xs font-bold uppercase text-slate-400">Select Finish</Label>
                                     <div className="flex flex-wrap gap-1.5">
-                                      {(Array.isArray(selectedProduct.colors) ? selectedProduct.colors : ["Indigo Blue", "Raw Black", "Stone Wash"]).map(c => (
+                                      {(Array.isArray(selectedProduct.colors) ? selectedProduct.colors : ["Indigo Blue", "Raw Black", "Stone Wash", "Burgundy"]).map(c => (
                                         <button key={c} type="button" onClick={() => setChosenColor(c)} className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${chosenColor === c ? "bg-white text-slate-950 border-white" : "bg-[#091324] border-slate-800 text-slate-300"}`}>{c}</button>
                                       ))}
                                     </div>
@@ -317,15 +333,14 @@ export default function Catalog() {
                                     <Label className="text-xs font-bold uppercase text-slate-400">Affiliate Code (Optional)</Label>
                                     <Input value={affiliateCode} onChange={e => setAffiliateCode(e.target.value)} placeholder="e.g. PARTNER10" className="bg-[#091324] border-slate-700 rounded-xl h-10 text-sm text-white placeholder-slate-600" />
                                   </div>
-                                  <Button onClick={addToCart} disabled={!chosenSize || !chosenColor} className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-5 rounded-xl text-xs tracking-widest uppercase shadow-lg mt-auto">Add to Cart Bag</Button>
+                                  <Button onClick={handleProceedToBespoke} disabled={!chosenSize || !chosenColor} className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-5 rounded-xl text-xs tracking-widest uppercase shadow-lg mt-auto">Add & Continue to Bespoke Fitting</Button>
                                 </TabsContent>
 
                                 <TabsContent value="custom" className="space-y-4 flex-1">
                                   {orderDone ? (
-                                    /* Fixed confirmation modal redirection state notice overlay */
                                     <div className="text-center py-8 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex flex-col items-center justify-center animate-fadeIn">
                                       <div className="w-12 h-12 bg-amber-500 text-slate-950 rounded-full flex items-center justify-center mb-3"><Check className="h-6 w-6 stroke-[3]" /></div>
-                                      <h4 className="font-bold text-lg text-white mb-1">Order Submitted!</h4>
+                                      <h4 className="font-bold text-lg text-white mb-1">Order Submitted Successfully!</h4>
                                       <p className="text-amber-400 text-xs font-black max-w-xs px-4 mb-5 uppercase tracking-wider">Go to your cart bag to checkout via WhatsApp!</p>
                                       <Button onClick={() => { setSelectedProduct(null); setCartOpen(true); }} className="bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs rounded-xl px-6 py-2.5">Open Cart Bag</Button>
                                     </div>
@@ -362,9 +377,10 @@ export default function Catalog() {
                                       </div>
 
                                       <div className="space-y-1"><Label className="text-[10px] font-bold uppercase text-slate-400">Styling Variations</Label><Textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} placeholder="Describe cuts, pocket options..." className="bg-[#091324] border-slate-700 rounded-xl text-xs h-14 resize-none text-white placeholder-slate-600" /></div>
-                                      <div className="space-y-1"><Label className="text-[10px] font-bold uppercase text-slate-400">Affiliate Code (Optional)</Label><Input value={affiliateCode} onChange={e => setAffiliateCode(e.target.value)} placeholder="e.g. PARTNER10" className="bg-[#091324] border-slate-700 rounded-xl h-10 text-sm text-white placeholder-slate-600" /></div>
 
-                                      <Button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-5 rounded-xl text-xs tracking-widest uppercase shadow-lg mt-auto">Order Now</Button>
+                                      <Button type="submit" disabled={dbSubmitting} className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-5 rounded-xl text-xs tracking-widest uppercase shadow-lg mt-auto">
+                                        {dbSubmitting ? "Syncing Admin Panel..." : "Order Now"}
+                                      </Button>
                                     </form>
                                   )}
                                 </TabsContent>
@@ -384,7 +400,6 @@ export default function Catalog() {
         {/* HIGHLY VISIBLE RE-STYLED CART SLIDER */}
         {cartOpen && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
-            {/* Switched background layer to an opaque dark blue tone matching theme */}
             <div className="w-full max-w-md bg-[#111F38] border-l border-slate-800 h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
               
               <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-[#091324]">
@@ -392,7 +407,6 @@ export default function Catalog() {
                   <ShoppingBag className="h-5 w-5 text-amber-400" />
                   <span>Your Cart Bag ({cartItems.length})</span>
                 </div>
-                {/* Fixed visibility on Cart Exit button node */}
                 <button onClick={() => setCartOpen(false)} className="w-9 h-9 rounded-xl bg-slate-800 text-white hover:bg-slate-700 flex items-center justify-center border border-slate-700 transition-colors">
                   <X className="h-5 w-5 stroke-[2.5]" />
                 </button>
@@ -407,11 +421,11 @@ export default function Catalog() {
                       <img src={item.img} alt={item.name} className="w-16 h-20 object-cover rounded-lg bg-slate-950 flex-shrink-0" />
                       <div className="flex-1">
                         <h4 className="font-bold text-sm text-white line-clamp-1">{item.name}</h4>
-                        <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Size: {item.size} | Color: {item.color}</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Size: {item.size} | Color: {item.color} | Qty: {item.qty}</p>
+                        <p className="text-[10px] text-amber-400 font-bold">Custom Bespoke Profile Linked</p>
                         {item.affiliateCode && <p className="text-[10px] text-amber-400 font-bold">Affiliate: {item.affiliateCode}</p>}
-                        <span className="text-amber-400 font-extrabold text-sm block mt-1">₦{(item.price || 0).toLocaleString()} x {item.qty}</span>
+                        <span className="text-amber-400 font-extrabold text-sm block mt-1">₦{((item.price || 0) * item.qty).toLocaleString()}</span>
                       </div>
-                      {/* Fixed visibility on individual item removal trigger */}
                       <button onClick={() => setCartItems(p => p.filter((_, j) => j !== i))} className="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-red-900/60 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center transition-all">
                         <X className="h-4 w-4 stroke-[2]" />
                       </button>
@@ -427,10 +441,10 @@ export default function Catalog() {
                     <span className="text-amber-400 font-black">₦{cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}</span>
                   </div>
                   
-                  <a href={`https://wa.me/2348163914835?text=Hello D-Kadris, I want to checkout the following items:\n\n${cartItems.map(i => {
-                    let base = `- ${i.name} (${i.size}, ${i.color}) x${i.qty}`;
+                  <a href={`https://wa.me/2348163914835?text=Hello D-Kadris, I want to checkout my custom order:\n\n${cartItems.map(i => {
+                    let base = `- ${i.name} Finish: [${i.color} / Size: ${i.size}] x${i.qty}`;
                     if (i.isCustom && i.measurements) {
-                      base += `\n   [Bespoke Name: ${i.measurements.client} | Phone: ${i.measurements.phone}]\n   [Measurements -> Sh: ${i.measurements.shoulder}", Ch: ${i.measurements.chest}", Sl: ${i.measurements.sleeve}", Lg: ${i.measurements.topLength}", Wst: ${i.measurements.waist}", Th: ${i.measurements.thigh}", TotalLg: ${i.measurements.jeansLength}"]`;
+                      base += `\n   [Client Name: ${i.measurements.client} | Phone: ${i.measurements.phone}]\n   [Measurements -> Fit: ${i.fitPreference} | Sh: ${i.measurements.shoulder}", Ch: ${i.measurements.chest}", Sl: ${i.measurements.sleeve}", Lg: ${i.measurements.topLength}", Wst: ${i.measurements.waist}", Th: ${i.measurements.thigh}", TotalLg: ${i.measurements.jeansLength}"]`;
                       if (i.measurements.notes) base += `\n   [Notes: ${i.measurements.notes}]`;
                     }
                     if (i.affiliateCode) base += `\n   [Affiliate Tracking: ${i.affiliateCode}]`;
