@@ -14,6 +14,14 @@ import { Search, Heart, MessageCircle, Star, Package, X, Check, ShoppingBag, Che
 // Import your verified Supabase client
 import { supabase } from "@/lib/supabase"; 
 
+// Multi-tier structural mapping config
+const CATEGORY_MAP = {
+  ALL: [],
+  DENIM: ["Jackets", "Jeans", "Cargo", "Shorts", "Jumpsuits"],
+  NATIVE: ["Senators", "Agbada", "Kaftans", "Caps"],
+  CORPORATE: ["Suits", "Blazers", "Trousers", "Shirts"]
+};
+
 const AnimatedElement = ({ children, className, delay = 0 }) => {
   const ref = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -37,6 +45,7 @@ export default function Catalog() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("ALL");
   const [sortBy, setSortBy] = useState("DEFAULT");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeTab, setActiveTab] = useState("ready");
@@ -64,6 +73,12 @@ export default function Catalog() {
   const [jeansLength, setJeansLength] = useState("");
   const [customNotes, setCustomNotes] = useState("");
   const [orderDone, setOrderDone] = useState(false);
+
+  // Reset subcategory on parent category switches
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+    setSelectedSubcategory("ALL");
+  };
 
   // Fetch Products from Supabase
   useEffect(() => {
@@ -147,11 +162,18 @@ export default function Catalog() {
 
   const toggleFav = (id) => setFavorites(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
-  // Client-side UI parsing logic
+  // Case-insensitive multi-tier UI parsing filter
   const filtered = products.filter(p => {
-    const matchS = p.name?.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase());
-    const matchC = selectedCategory === "ALL" || p.category === selectedCategory;
-    return matchS && matchC;
+    const matchS = p.name?.toLowerCase().includes(search.toLowerCase()) || 
+                   p.description?.toLowerCase().includes(search.toLowerCase());
+    
+    const matchC = selectedCategory === "ALL" || 
+                   p.category?.toLowerCase().trim() === selectedCategory.toLowerCase().trim();
+                   
+    const matchSub = selectedSubcategory === "ALL" || 
+                     p.subcategory?.toLowerCase().trim() === selectedSubcategory.toLowerCase().trim();
+                     
+    return matchS && matchC && matchSub;
   });
 
   if (sortBy === "PRICE_LOW") filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
@@ -168,29 +190,57 @@ export default function Catalog() {
           <p className="text-muted-foreground font-body text-base">Explore premium custom denim and traditional structural designs crafted for individual dimensions.</p>
         </AnimatedElement>
 
-        {/* Filters and Inputs Layout */}
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-10 border border-border/40 p-4 rounded-2xl bg-card/50 backdrop-blur-md">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search jeans, jackets, native attires..." className="pl-10 bg-background border-border rounded-xl h-11" />
+        {/* Filters and Inputs Layout Container */}
+        <div className="flex flex-col mb-10 border border-border/40 p-4 rounded-2xl bg-card/50 backdrop-blur-md">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search jeans, jackets, native attires..." className="pl-10 bg-background border-border rounded-xl h-11" />
+            </div>
+            
+            {/* Primary Parent Categories matching Screenshot_20260624-002630_3.jpg */}
+            <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+              {["ALL", "DENIM", "NATIVE", "CORPORATE"].map(c => (
+                <Button key={c} variant={selectedCategory === c ? "default" : "outline"} onClick={() => handleCategoryChange(c)} className="rounded-xl font-bold text-xs tracking-wider h-11 px-5 flex-shrink-0">
+                  {c}
+                </Button>
+              ))}
+            </div>
+            
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-full md:w-48 bg-background border-border h-11 rounded-xl font-bold text-xs text-muted-foreground">
+                <SelectValue placeholder="Sort Layout" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border-border text-foreground">
+                <SelectItem value="DEFAULT">Default Ordering</SelectItem>
+                <SelectItem value="PRICE_LOW">Price: Low to High</SelectItem>
+                <SelectItem value="PRICE_HIGH">Price: High to Low</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-            {["ALL", "DENIM", "NATIVE", "CORPORATE"].map(c => (
-              <Button key={c} variant={selectedCategory === c ? "default" : "outline"} onClick={() => setSelectedCategory(c)} className="rounded-xl font-bold text-xs tracking-wider h-11 px-5 flex-shrink-0">
-                {c}
+
+          {/* Dynamic Secondary Subcategories Layout Row */}
+          {selectedCategory !== "ALL" && CATEGORY_MAP[selectedCategory]?.length > 0 && (
+            <div className="flex gap-2 w-full overflow-x-auto pt-3 pb-1 border-t border-border/20 mt-4 transition-all duration-300">
+              <Button
+                variant={selectedSubcategory === "ALL" ? "secondary" : "ghost"}
+                onClick={() => setSelectedSubcategory("ALL")}
+                className="rounded-lg text-xs h-8 px-3 font-bold uppercase tracking-wider flex-shrink-0"
+              >
+                All {selectedCategory.toLowerCase()}
               </Button>
-            ))}
-          </div>
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full md:w-48 bg-background border-border h-11 rounded-xl font-bold text-xs text-muted-foreground">
-              <SelectValue placeholder="Sort Layout" />
-            </SelectTrigger>
-            <SelectContent className="bg-background border-border text-foreground">
-              <SelectItem value="DEFAULT">Default Ordering</SelectItem>
-              <SelectItem value="PRICE_LOW">Price: Low to High</SelectItem>
-              <SelectItem value="PRICE_HIGH">Price: High to Low</SelectItem>
-            </SelectContent>
-          </Select>
+              {CATEGORY_MAP[selectedCategory].map(sub => (
+                <Button
+                  key={sub}
+                  variant={selectedSubcategory === sub ? "secondary" : "ghost"}
+                  onClick={() => setSelectedSubcategory(sub)}
+                  className="rounded-lg text-xs h-8 px-3 font-bold uppercase tracking-wider flex-shrink-0"
+                >
+                  {sub}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Catalog Grid View */}
@@ -202,7 +252,7 @@ export default function Catalog() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-24 border border-dashed border-border/60 rounded-3xl">
             <Package className="h-12 w-14 mx-auto text-muted-foreground/40 mb-3" />
-            <p className="text-muted-foreground font-body">No garments matched your search parameters.</p>
+            <p className="text-muted-foreground font-body">No garments matched your filtering parameters.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -217,7 +267,15 @@ export default function Catalog() {
                 </div>
                 <div className="p-5 flex-1 flex flex-col">
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-accent text-[10px] font-bold tracking-widest uppercase">{product.category}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-accent text-[10px] font-bold tracking-widest uppercase">{product.category}</span>
+                      {product.subcategory && (
+                        <>
+                          <span className="text-muted-foreground/40 text-[9px]">•</span>
+                          <span className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">{product.subcategory}</span>
+                        </>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1 text-amber-500"><Star className="h-3 w-3 fill-amber-500" /><span className="text-xs font-bold text-foreground">5.0</span></div>
                   </div>
                   <h3 className="font-heading font-bold text-lg text-foreground group-hover:text-accent transition-colors mb-1 line-clamp-1">{product.name}</h3>
@@ -244,7 +302,7 @@ export default function Catalog() {
                             {/* Right Customization Form */}
                             <div className="flex-1 flex flex-col overflow-y-auto p-6 sm:p-8">
                               <DialogHeader className="mb-4">
-                                <span className="text-accent text-[10px] font-bold tracking-widest uppercase mb-1">{selectedProduct.category}</span>
+                                <span className="text-accent text-[10px] font-bold tracking-widest uppercase mb-1">{selectedProduct.category} {selectedProduct.subcategory ? `/ ${selectedProduct.subcategory}` : ""}</span>
                                 <DialogTitle className="font-heading font-extrabold text-2xl sm:text-3xl text-foreground">{selectedProduct.name}</DialogTitle>
                                 <span className="text-accent font-heading font-extrabold text-xl mt-1">₦{(selectedProduct.price || 0).toLocaleString()}</span>
                               </DialogHeader>
@@ -265,7 +323,7 @@ export default function Catalog() {
                                     </div>
                                   </div>
                                   <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Select Denim Wash / Color</Label>
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Select Finish / Color</Label>
                                     <div className="flex flex-wrap gap-2">
                                       {(Array.isArray(selectedProduct.colors) ? selectedProduct.colors : ["Indigo Blue", "Raw Black", "Stone Wash", "Charcoal Grey"]).map(c => (
                                         <button key={c} onClick={() => setChosenColor(c)} className={`px-4 py-2 text-xs font-bold rounded-lg border transition-all ${chosenColor === c ? "bg-accent border-accent text-accent-foreground shadow-sm" : "bg-background border-border text-foreground hover:bg-muted"}`}>{c}</button>
@@ -273,8 +331,7 @@ export default function Catalog() {
                                     </div>
                                   </div>
                                   <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quantity</Label>
-                                    <div className="flex items-center gap-3 border border-border w-max rounded-xl p-1 bg-background">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quantity</Label><div className="flex items-center gap-3 border border-border w-max rounded-xl p-1 bg-background">
                                       <button onClick={() => setQty(p => Math.max(1, p - 1))} className="w-8 h-8 flex items-center justify-center hover:bg-muted rounded-lg font-bold text-lg">-</button>
                                       <span className="w-8 text-center font-bold text-sm">{qty}</span>
                                       <button onClick={() => setQty(p => p + 1)} className="w-8 h-8 flex items-center justify-center hover:bg-muted rounded-lg font-bold text-lg">+</button>
@@ -321,7 +378,7 @@ export default function Catalog() {
                                           <div className="space-y-1"><Label className="text-[10px] font-medium text-muted-foreground">Top Length</Label><Input value={topLength} onChange={e=>setTopLength(e.target.value)} placeholder="30" className="bg-background border-border rounded-lg h-8 text-xs text-center" /></div>
                                           <div className="space-y-1"><Label className="text-[10px] font-medium text-muted-foreground">Waist Line</Label><Input value={waist} onChange={e=>setWaist(e.target.value)} placeholder="34" className="bg-background border-border rounded-lg h-8 text-xs text-center" /></div>
                                           <div className="space-y-1"><Label className="text-[10px] font-medium text-muted-foreground">Thigh</Label><Input value={thigh} onChange={e=>setThigh(e.target.value)} placeholder="24" className="bg-background border-border rounded-lg h-8 text-xs text-center" /></div>
-                                          <div className="space-y-1"><Label className="text-[10px] font-medium text-muted-foreground">Length (Jeans)</Label><Input value={jeansLength} onChange={e=>setJeansLength(e.target.value)} placeholder="42" className="bg-background border-border rounded-lg h-8 text-xs text-center" /></div>
+                                          <div className="space-y-1"><Label className="text-[10px] font-medium text-muted-foreground">Length (Bottom)</Label><Input value={jeansLength} onChange={e=>setJeansLength(e.target.value)} placeholder="42" className="bg-background border-border rounded-lg h-8 text-xs text-center" /></div>
                                         </div>
                                       </div>
 
@@ -393,4 +450,4 @@ export default function Catalog() {
       </div>
     </div>
   );
-}
+                    }
