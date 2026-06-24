@@ -317,25 +317,31 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            {/* Structured Multi-tier Layout Row Input Fields */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Main Category</label>
-                <select required value={formData.category} onChange={e => handleCategoryFormChange(e.target.value)} className="w-full h-10 px-3 bg-muted border border-border rounded-md text-sm text-card-foreground focus:outline-none font-bold">
+            {/* Structured Multi-tier Layout Row Input Fields with Aligned h-11 heights */}
+            <div className="grid grid-cols-2 gap-4 items-end">
+              <div className="space-y-1.5 flex flex-col justify-end">
+                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block">Main Category</label>
+                <select 
+                  required 
+                  value={formData.category} 
+                  onChange={e => handleCategoryFormChange(e.target.value)} 
+                  className="w-full h-11 px-3 bg-muted border border-border rounded-xl text-sm text-card-foreground focus:outline-none font-bold cursor-pointer transition-all hover:bg-muted/80"
+                >
                   <option value="" disabled>Select Parent...</option>
                   {['DENIM', 'NATIVE', 'CORPORATE'].map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Subcategory Type</label>
+              
+              <div className="space-y-1.5 flex flex-col justify-end">
+                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block">Subcategory Type</label>
                 <select 
                   required
                   disabled={!formData.category}
                   value={formData.subcategory} 
                   onChange={e => setFormData({...formData, subcategory: e.target.value})} 
-                  className="w-full h-10 px-3 bg-muted border border-border rounded-md text-sm text-card-foreground focus:outline-none disabled:opacity-50"
+                  className="w-full h-11 px-3 bg-muted border border-border rounded-xl text-sm text-card-foreground focus:outline-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:bg-muted/80"
                 >
                   <option value="" disabled>Choose specificity...</option>
                   {formData.category && CATEGORY_MAP[formData.category]?.map(sub => (
