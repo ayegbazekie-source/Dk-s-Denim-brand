@@ -47,7 +47,7 @@ export default function Catalog() {
   const [selectedSubcategory, setSelectedSubcategory] = useState("ALL");
   const [sortBy, setSortBy] = useState("DEFAULT");
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [dbError, setDbError] = useState(null);
+    const [dbError, setDbError] = useState(null);
   const [activeTab, setActiveTab] = useState("ready");
   const [cartItems, setCartItems] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -96,31 +96,31 @@ export default function Catalog() {
     }
     fetchProducts();
   }, []);
+  
+  const [dbSubmitting, setDbSubmitting] = useState(false);
+  const [dbError, setDbError] = useState(null);
 
-    // FLOW STEP 1: Ready-to-wear "Add to Cart" button redirects into the Bespoke panel
-  const handleProceedToBespoke = (e) => {
-    e.preventDefault();
-    if (!chosenSize || !chosenColor) return;
-    setActiveTab("custom"); 
-  };
-
-  // FLOW STEP 2: Submission pushes data to Supabase orders table and stores one clean item in state
   const handleCustomOrderSubmit = async (e) => {
-    e.preventDefault();
-    if (!custName || !custPhone) return;
+    if (e && e.preventDefault) e.preventDefault();
+    
+    // Safety check to see if fields are filled
+    if (!custName || !custPhone) {
+      alert("Please fill in your Full Name and Phone Number.");
+      return;
+    }
 
     setDbSubmitting(true);
     setDbError(null); 
-    const calculatedTotal = (selectedProduct.price || 0) * qty;
+    const calculatedTotal = (selectedProduct?.price || 0) * qty;
 
     const unifiedItem = {
-      id: selectedProduct.id,
-      name: selectedProduct.name,
-      price: selectedProduct.price,
-      img: selectedProduct.image_url,
+      id: selectedProduct?.id,
+      name: selectedProduct?.name,
+      price: selectedProduct?.price,
+      img: selectedProduct?.image_url,
       qty: qty,
-      size: chosenSize, 
-      color: chosenColor, 
+      size: chosenSize || "Bespoke Custom", 
+      color: chosenColor || `Fit: ${fitPref}`, 
       affiliateCode: affiliateCode,
       isCustom: true,
       fitPreference: fitPref,
@@ -134,6 +134,44 @@ export default function Catalog() {
     };
 
     try {
+      const { error } = await supabase.from("orders").insert([
+        {
+          customer_name: custName,
+          customer_phone: custPhone,
+          customer_email: custEmail,
+          total_price: calculatedTotal,
+          status: "Pending",
+          items: [unifiedItem], 
+          created_at: new Date().toISOString()
+        }
+      ]);
+
+      if (error) throw error;
+
+      // Update cart state cleanly
+      setCartItems(prev => {
+        const cleaned = prev.filter(item => item.id !== selectedProduct?.id);
+        return [...cleaned, unifiedItem];
+      });
+      
+      setOrderDone(true);
+
+      // Clear fields safely
+      setCustName(""); setCustPhone(""); setCustEmail(""); setCustomNotes("");
+      setShoulder(""); setChest(""); setSleeve(""); setTopLength(""); setWaist(""); setThigh(""); setJeansLength("");
+      setChosenSize(""); setChosenColor(""); setQty(1); setAffiliateCode("");
+    } catch (err) {
+      console.error("Database Error:", err.message);
+      setDbError(err.message || "Failed to sync order with database.");
+    } finally {
+      setDbSubmitting(false);
+    }
+  };
+
+
+
+    try {
+      // Direct write into Supabase to populate your Admin order dashboard instantly
       const { error } = await supabase.from("orders").insert([
         {
           customer_name: custName,
@@ -162,12 +200,11 @@ export default function Catalog() {
       setChosenSize(""); setChosenColor(""); setQty(1); setAffiliateCode("");
     } catch (err) {
       console.error("Database connection panel error:", err.message);
-      setDbError(err.message || "Failed to sync order with database.");
     } finally {
       setDbSubmitting(false);
     }
   };
-        
+
   const toggleFav = (id) => setFavorites(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
   const filtered = products.filter(p => {
@@ -281,7 +318,7 @@ export default function Catalog() {
                   
                   <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 mt-auto">
                     <span className="text-amber-600 font-extrabold text-base sm:text-lg">₦{(product.price || 0).toLocaleString()}</span>
-                    
+
                     <Dialog open={selectedProduct?.id === product.id} onOpenChange={(isOpen) => { if(isOpen) { setSelectedProduct(product); setImageIndex(0); setOrderDone(false); setActiveTab("ready"); } else { setSelectedProduct(null); } }}>
                       <DialogTrigger asChild>
                         <Button className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl h-9 px-3 sm:px-4 transition-all">Quick View</Button>
@@ -380,10 +417,23 @@ export default function Catalog() {
 
                                       <div className="space-y-1"><Label className="text-[10px] font-bold uppercase text-slate-400">Styling Variations</Label><Textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} placeholder="Describe cuts, pocket options..." className="bg-[#091324] border-slate-700 rounded-xl text-xs h-14 resize-none text-white placeholder-slate-600" /></div>
 
-                                      <Button type="submit" disabled={dbSubmitting} className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-5 rounded-xl text-xs tracking-widest uppercase shadow-lg mt-auto">
+                                                                            {/* ERROR DISPLAY BANNER */}
+                                      {dbError && (
+                                        <div className="p-3 bg-red-950/80 border border-red-500 text-red-200 text-xs rounded-xl font-bold my-2 tracking-wide text-left">
+                                          ⚠️ Database Error: {dbError}
+                                        </div>
+                                      )}
+
+                                      <Button 
+                                        type="button" 
+                                        onClick={handleCustomOrderSubmit}
+                                        disabled={dbSubmitting} 
+                                        className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-5 rounded-xl text-xs tracking-widest uppercase shadow-lg mt-4"
+                                      >
                                         {dbSubmitting ? "Syncing Admin Panel..." : "Order Now"}
                                       </Button>
                                     </form>
+
                                   )}
                                 </TabsContent>
                               </Tabs>
@@ -468,4 +518,4 @@ export default function Catalog() {
       </div>
     </div>
   );
-}
+                                      }
