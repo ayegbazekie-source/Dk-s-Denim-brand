@@ -9,10 +9,10 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Heart, MessageCircle, Star, Package, X, Check, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Heart, MessageCircle, Star, Package, X, Check, ShoppingBag } from "lucide-react";
 
 // Import your verified Supabase client
-import { supabase } from "@/lib/supabase"; 
+import { supabase } from "@/lib/supabase";
 
 const CATEGORY_MAP = {
   ALL: [],
@@ -24,6 +24,7 @@ const CATEGORY_MAP = {
 const AnimatedElement = ({ children, className, delay = 0 }) => {
   const ref = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -36,6 +37,7 @@ const AnimatedElement = ({ children, className, delay = 0 }) => {
     observer.observe(el);
     return () => { observer.disconnect(); clearTimeout(fallback); };
   }, [delay]);
+
   return <div ref={ref} className={`${className} transition-all duration-1000 ease-out ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>{children}</div>;
 };
 
@@ -46,11 +48,12 @@ export default function Catalog() {
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [selectedSubcategory, setSelectedSubcategory] = useState("ALL");
   const [sortBy, setSortBy] = useState("DEFAULT");
-    const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeTab, setActiveTab] = useState("ready");
+  
+  // App-wide Status & Cart States
   const [dbSubmitting, setDbSubmitting] = useState(false);
   const [dbError, setDbError] = useState(null);
-
   const [cartItems, setCartItems] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [favorites, setFavorites] = useState([]);
@@ -76,11 +79,14 @@ export default function Catalog() {
   const [customNotes, setCustomNotes] = useState("");
   const [orderDone, setOrderDone] = useState(false);
   const [affiliateCode, setAffiliateCode] = useState("");
-  const [dbSubmitting, setDbSubmitting] = useState(false);
 
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
     setSelectedSubcategory("ALL");
+  };
+
+  const handleProceedToBespoke = () => {
+    setActiveTab("custom");
   };
 
   useEffect(() => {
@@ -98,16 +104,14 @@ export default function Catalog() {
     }
     fetchProducts();
   }, []);
-  
-  const [dbSubmitting, setDbSubmitting] = useState(false);
-  const [dbError, setDbError] = useState(null);
 
-  
-
+  const handleCustomOrderSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    
     setDbSubmitting(true);
     setDbError(null); 
+    
     const calculatedTotal = (selectedProduct?.price || 0) * qty;
-
     const unifiedItem = {
       id: selectedProduct?.id,
       name: selectedProduct?.name,
@@ -129,43 +133,6 @@ export default function Catalog() {
     };
 
     try {
-      const { error } = await supabase.from("orders").insert([
-        {
-          customer_name: custName,
-          customer_phone: custPhone,
-          customer_email: custEmail,
-          total_price: calculatedTotal,
-          status: "Pending",
-          items: [unifiedItem], 
-          created_at: new Date().toISOString()
-        }
-      ]);
-
-      if (error) throw error;
-
-      // Update cart state cleanly
-      setCartItems(prev => {
-        const cleaned = prev.filter(item => item.id !== selectedProduct?.id);
-        return [...cleaned, unifiedItem];
-      });
-      
-      setOrderDone(true);
-
-      // Clear fields safely
-      setCustName(""); setCustPhone(""); setCustEmail(""); setCustomNotes("");
-      setShoulder(""); setChest(""); setSleeve(""); setTopLength(""); setWaist(""); setThigh(""); setJeansLength("");
-      setChosenSize(""); setChosenColor(""); setQty(1); setAffiliateCode("");
-    } catch (err) {
-      console.error("Database Error:", err.message);
-      setDbError(err.message || "Failed to sync order with database.");
-    } finally {
-      setDbSubmitting(false);
-    }
-  };
-
-
-
-    try {
       // Direct write into Supabase to populate your Admin order dashboard instantly
       const { error } = await supabase.from("orders").insert([
         {
@@ -181,20 +148,20 @@ export default function Catalog() {
 
       if (error) throw error;
 
-      // Filter out any previous variations of this product code to prevent duplicate cart entries
+      // Update cart state cleanly and filter variations out to avoid duplicates
       setCartItems(prev => {
-        const cleaned = prev.filter(item => item.id !== selectedProduct.id);
+        const cleaned = prev.filter(item => item.id !== selectedProduct?.id);
         return [...cleaned, unifiedItem];
       });
-      
       setOrderDone(true);
 
-      // Clean down forms safely
+      // Clear fields safely
       setCustName(""); setCustPhone(""); setCustEmail(""); setCustomNotes("");
-      setShoulder(""); setChest(""); setSleeve(""); setTopLength(""); setWaist(""); setThigh(""); setJeansLength("");
-      setChosenSize(""); setChosenColor(""); setQty(1); setAffiliateCode("");
+      setShoulder(""); setChest(""); setSleeve(""); setTopLength(""); setWaist(""); setThigh("");
+      setJeansLength(""); setChosenSize(""); setChosenColor(""); setQty(1); setAffiliateCode("");
     } catch (err) {
       console.error("Database connection panel error:", err.message);
+      setDbError(err.message || "Failed to sync order with database.");
     } finally {
       setDbSubmitting(false);
     }
@@ -317,14 +284,15 @@ export default function Catalog() {
                     <Dialog open={selectedProduct?.id === product.id} onOpenChange={(isOpen) => { if(isOpen) { setSelectedProduct(product); setImageIndex(0); setOrderDone(false); setActiveTab("ready"); } else { setSelectedProduct(null); } }}>
                       <DialogTrigger asChild>
                         <Button className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl h-9 px-3 sm:px-4 transition-all">Quick View</Button>
-                        </DialogTrigger>
+                      </DialogTrigger>
+            
                       <DialogContent className="bg-[#111F38] border-slate-800 max-w-4xl w-[95vw] h-[90vh] sm:h-[85vh] flex flex-col p-0 overflow-hidden text-white">
                         {selectedProduct && (
                           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                             <div className="w-full md:w-1/2 bg-slate-950 relative flex-shrink-0 h-48 md:h-full max-h-[25vh] md:max-h-full">
                               <img src={selectedProduct.image_url} alt={selectedProduct.name} className="w-full h-full object-cover object-top" />
                             </div>
-                            
+                    
                             <div className="flex-1 flex flex-col overflow-y-auto p-5 sm:p-8">
                               <DialogHeader className="mb-4">
                                 <span className="text-amber-400 text-[10px] font-bold tracking-widest uppercase mb-1">{selectedProduct.category} {selectedProduct.subcategory ? `/ ${selectedProduct.subcategory}` : ""}</span>
@@ -333,7 +301,7 @@ export default function Catalog() {
                               </DialogHeader>
 
                               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col">
-                                <TabsList className="grid grid-cols-2 w-full bg-[#091324] border border-slate-800 rounded-xl p-1 mb-5 pointer-events-none">
+                                <TabsList className="grid grid-cols-2 w-full bg-[#091324] border border-slate-800 rounded-xl p-1 mb-5">
                                   <TabsTrigger value="ready" className="rounded-lg font-bold text-xs tracking-wider">1. Base Selection</TabsTrigger>
                                   <TabsTrigger value="custom" className="rounded-lg font-bold text-xs tracking-wider">2. Bespoke Details</TabsTrigger>
                                 </TabsList>
@@ -355,6 +323,7 @@ export default function Catalog() {
                                       ))}
                                     </div>
                                   </div>
+                   
                                   <div className="space-y-1.5">
                                     <Label className="text-xs font-bold uppercase text-slate-400">Quantity</Label>
                                     <div className="flex items-center gap-3 border border-slate-800 w-max rounded-xl p-1 bg-[#091324]">
@@ -385,7 +354,7 @@ export default function Catalog() {
                                         <div className="space-y-1"><Label className="text-[10px] font-bold uppercase text-slate-400">Phone Number *</Label><Input required value={custPhone} onChange={e=>setCustPhone(e.target.value)} placeholder="0803 xxxx 789" className="bg-[#091324] border-slate-700 rounded-xl h-10 text-sm text-white placeholder-slate-600" /></div>
                                       </div>
                                       <div className="space-y-1"><Label className="text-[10px] font-bold uppercase text-slate-400">Email Address</Label><Input type="email" value={custEmail} onChange={e=>setCustEmail(e.target.value)} placeholder="client@example.com" className="bg-[#091324] border-slate-700 rounded-xl h-10 text-sm text-white placeholder-slate-600" /></div>
-                                      
+                                    
                                       <div className="space-y-1">
                                         <Label className="text-[10px] font-bold uppercase text-slate-400">Fit Mapping Preference</Label>
                                         <Select value={fitPref} onValueChange={setFitPref}>
@@ -412,7 +381,7 @@ export default function Catalog() {
 
                                       <div className="space-y-1"><Label className="text-[10px] font-bold uppercase text-slate-400">Styling Variations</Label><Textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} placeholder="Describe cuts, pocket options..." className="bg-[#091324] border-slate-700 rounded-xl text-xs h-14 resize-none text-white placeholder-slate-600" /></div>
 
-                                                                            {/* ERROR DISPLAY BANNER */}
+                                      {/* ERROR DISPLAY BANNER */}
                                       {dbError && (
                                         <div className="p-3 bg-red-950/80 border border-red-500 text-red-200 text-xs rounded-xl font-bold my-2 tracking-wide text-left">
                                           ⚠️ Database Error: {dbError}
@@ -420,15 +389,13 @@ export default function Catalog() {
                                       )}
 
                                       <Button 
-                                        type="button" 
-                                        onClick={handleCustomOrderSubmit}
+                                        type="submit" 
                                         disabled={dbSubmitting} 
                                         className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-5 rounded-xl text-xs tracking-widest uppercase shadow-lg mt-4"
                                       >
                                         {dbSubmitting ? "Syncing Admin Panel..." : "Order Now"}
                                       </Button>
                                     </form>
-
                                   )}
                                 </TabsContent>
                               </Tabs>
@@ -513,4 +480,4 @@ export default function Catalog() {
       </div>
     </div>
   );
-                                    }
+}
