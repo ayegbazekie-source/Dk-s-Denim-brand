@@ -46,9 +46,11 @@ export default function Catalog() {
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [selectedSubcategory, setSelectedSubcategory] = useState("ALL");
   const [sortBy, setSortBy] = useState("DEFAULT");
-  const [selectedProduct, setSelectedProduct] = useState(null);
-    const [dbError, setDbError] = useState(null);
+    const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeTab, setActiveTab] = useState("ready");
+  const [dbSubmitting, setDbSubmitting] = useState(false);
+  const [dbError, setDbError] = useState(null);
+
   const [cartItems, setCartItems] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [favorites, setFavorites] = useState([]);
@@ -100,14 +102,7 @@ export default function Catalog() {
   const [dbSubmitting, setDbSubmitting] = useState(false);
   const [dbError, setDbError] = useState(null);
 
-  const handleCustomOrderSubmit = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    
-    // Safety check to see if fields are filled
-    if (!custName || !custPhone) {
-      alert("Please fill in your Full Name and Phone Number.");
-      return;
-    }
+  
 
     setDbSubmitting(true);
     setDbError(null); 
@@ -318,11 +313,11 @@ export default function Catalog() {
                   
                   <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 mt-auto">
                     <span className="text-amber-600 font-extrabold text-base sm:text-lg">₦{(product.price || 0).toLocaleString()}</span>
-
+                    
                     <Dialog open={selectedProduct?.id === product.id} onOpenChange={(isOpen) => { if(isOpen) { setSelectedProduct(product); setImageIndex(0); setOrderDone(false); setActiveTab("ready"); } else { setSelectedProduct(null); } }}>
                       <DialogTrigger asChild>
                         <Button className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl h-9 px-3 sm:px-4 transition-all">Quick View</Button>
-                      </DialogTrigger>
+                        </DialogTrigger>
                       <DialogContent className="bg-[#111F38] border-slate-800 max-w-4xl w-[95vw] h-[90vh] sm:h-[85vh] flex flex-col p-0 overflow-hidden text-white">
                         {selectedProduct && (
                           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
@@ -418,6 +413,7 @@ export default function Catalog() {
                                       <div className="space-y-1"><Label className="text-[10px] font-bold uppercase text-slate-400">Styling Variations</Label><Textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} placeholder="Describe cuts, pocket options..." className="bg-[#091324] border-slate-700 rounded-xl text-xs h-14 resize-none text-white placeholder-slate-600" /></div>
 
                                                                             {/* ERROR DISPLAY BANNER */}
+                                      {dbError && (
                                         <div className="p-3 bg-red-950/80 border border-red-500 text-red-200 text-xs rounded-xl font-bold my-2 tracking-wide text-left">
                                           ⚠️ Database Error: {dbError}
                                         </div>
@@ -517,4 +513,4 @@ export default function Catalog() {
       </div>
     </div>
   );
-                                      }
+                                    }
