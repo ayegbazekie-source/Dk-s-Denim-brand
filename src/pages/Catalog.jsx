@@ -449,27 +449,71 @@ export default function Catalog() {
               </div>
 
               {cartItems.length > 0 && (
-                <div className="p-6 border-t border-slate-800 bg-[#091324]">
-                  <div className="flex justify-between text-white font-bold mb-5 text-lg">
-                    <span>Total Subtotal</span>
-                    <span className="text-amber-400 font-black">₦{cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}</span>
-                  </div>
-                  
-                  <a href={`https://wa.me/2348163914835?text=Hello D-Kadris, I want to checkout my custom order:\n\n${cartItems.map(i => {
-                    let base = `- ${i.name} Finish: [${i.color} / Size: ${i.size}] x${i.qty}`;
-                    if (i.isCustom && i.measurements) {
-                      base += `\n   [Client Name: ${i.measurements.client} | Phone: ${i.measurements.phone}]\n   [Measurements -> Fit: ${i.fitPreference} | Sh: ${i.measurements.shoulder}", Ch: ${i.measurements.chest}", Sl: ${i.measurements.sleeve}", Lg: ${i.measurements.topLength}", Wst: ${i.measurements.waist}", Th: ${i.measurements.thigh}", TotalLg: ${i.measurements.jeansLength}"]`;
-                      if (i.measurements.notes) base += `\n   [Notes: ${i.measurements.notes}]`;
-                    }
-                    if (i.affiliateCode) base += `\n   [Affiliate Tracking: ${i.affiliateCode}]`;
-                    return base;
-                  }).join("\n\n")}\n\nTotal Gross: ₦${cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}`} target="_blank" rel="noopener noreferrer">
-                    <Button className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl py-6 tracking-widest uppercase text-xs shadow-xl transition-all">
-                      <MessageCircle className="mr-2 h-4 w-4 stroke-[2.5]" /> Checkout via WhatsApp
-                    </Button>
-                  </a>
-                </div>
-              )}
+  <div className="p-6 border-t border-slate-800 bg-[#091324]">
+    <div className="flex justify-between text-white font-bold mb-5 text-lg">
+      <span>Total Subtotal</span>
+      <span className="text-amber-400 font-black">₦{cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}</span>
+    </div>
+    
+    <a 
+      href={`https://wa.me/2348163914835?text=${encodeURIComponent(
+        `*D-KADRIS BESPOKE ORDER*\n` +
+        `----------------------------------\n\n` +
+        cartItems.map(item => {
+          let block = `👕 *Garment:* ${item.name}\n` +
+                      `🎨 *Finish:* ${item.color} | *Size:* ${item.size} | *Qty:* ${item.qty}\n`;
+          
+          if (item.isCustom && item.measurements) {
+            block += `\n👤 *Client:* ${item.measurements.client}\n` +
+                     `📞 *Phone:* ${item.measurements.phone}\n` +
+                     `⚙️ *Fit Mapping:* ${item.fitPreference}\n\n` +
+                     `*MEASUREMENT PROFILE (Inches)*\n`;
+            
+            // Map out keys dynamically to check for non-empty string entries
+            const measurementLabels = [
+              ["Shoulder", item.measurements.shoulder],
+              ["Chest", item.measurements.chest],
+              ["Sleeve", item.measurements.sleeve],
+              ["Top Length", item.measurements.topLength],
+              ["Waist Line", item.measurements.waist],
+              ["Thigh", item.measurements.thigh],
+              ["Length", item.measurements.jeansLength]
+            ];
+
+            // Filter out entries that don't have text values typed in
+            const activeMeasurements = measurementLabels
+              .filter(([_, val]) => val && val.trim() !== "")
+              .map(([lbl, val]) => `• ${lbl}: ${val}"`);
+
+            if (activeMeasurements.length > 0) {
+              block += activeMeasurements.join("\n") + `\n`;
+            } else {
+              block += `• No custom sizing parameters added\n`;
+            }
+
+            if (item.measurements.notes && item.measurements.notes.trim() !== "") {
+              block += `\n📌 *Styling Variations:* ${item.measurements.notes}\n`;
+            }
+          }
+
+          if (item.affiliateCode && item.affiliateCode.trim() !== "") {
+            block += `\n🎟️ *Affiliate Tracking:* ${item.affiliateCode}\n`;
+          }
+
+          return block;
+        }).join("\n----------------------------------\n\n") +
+        `\n----------------------------------\n` +
+        `💰 *Total Gross:* ₦${cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}`
+      )}`} 
+      target="_blank" 
+      rel="noopener noreferrer"
+    >
+      <Button className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl py-6 tracking-widest uppercase text-xs shadow-xl transition-all">
+        <MessageCircle className="mr-2 h-4 w-4 stroke-[2.5]" /> Checkout via WhatsApp
+      </Button>
+    </a>
+  </div>
+)}
             </div>
           </div>
         )}
