@@ -418,7 +418,6 @@ export default function Catalog() {
                                       <div className="space-y-1"><Label className="text-[10px] font-bold uppercase text-slate-400">Styling Variations</Label><Textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} placeholder="Describe cuts, pocket options..." className="bg-[#091324] border-slate-700 rounded-xl text-xs h-14 resize-none text-white placeholder-slate-600" /></div>
 
                                                                             {/* ERROR DISPLAY BANNER */}
-                                      {dbError && (
                                         <div className="p-3 bg-red-950/80 border border-red-500 text-red-200 text-xs rounded-xl font-bold my-2 tracking-wide text-left">
                                           ⚠️ Database Error: {dbError}
                                         </div>
