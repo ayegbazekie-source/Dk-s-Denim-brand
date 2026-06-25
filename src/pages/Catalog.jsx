@@ -47,6 +47,7 @@ export default function Catalog() {
   const [selectedSubcategory, setSelectedSubcategory] = useState("ALL");
   const [sortBy, setSortBy] = useState("DEFAULT");
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [dbError, setDbError] = useState(null);
   const [activeTab, setActiveTab] = useState("ready");
   const [cartItems, setCartItems] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -96,7 +97,7 @@ export default function Catalog() {
     fetchProducts();
   }, []);
 
-  // FLOW STEP 1: Ready-to-wear "Add to Cart" button redirects into the Bespoke panel
+    // FLOW STEP 1: Ready-to-wear "Add to Cart" button redirects into the Bespoke panel
   const handleProceedToBespoke = (e) => {
     e.preventDefault();
     if (!chosenSize || !chosenColor) return;
@@ -109,6 +110,7 @@ export default function Catalog() {
     if (!custName || !custPhone) return;
 
     setDbSubmitting(true);
+    setDbError(null); 
     const calculatedTotal = (selectedProduct.price || 0) * qty;
 
     const unifiedItem = {
@@ -132,7 +134,6 @@ export default function Catalog() {
     };
 
     try {
-      // Direct write into Supabase to populate your Admin order dashboard instantly
       const { error } = await supabase.from("orders").insert([
         {
           customer_name: custName,
@@ -161,11 +162,12 @@ export default function Catalog() {
       setChosenSize(""); setChosenColor(""); setQty(1); setAffiliateCode("");
     } catch (err) {
       console.error("Database connection panel error:", err.message);
+      setDbError(err.message || "Failed to sync order with database.");
     } finally {
       setDbSubmitting(false);
     }
   };
-
+        
   const toggleFav = (id) => setFavorites(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
   const filtered = products.filter(p => {
@@ -466,4 +468,3 @@ export default function Catalog() {
       </div>
     </div>
   );
-}
