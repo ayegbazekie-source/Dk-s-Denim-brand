@@ -54,7 +54,13 @@ export default function Catalog() {
   // App-wide Status & Cart States
   const [dbSubmitting, setDbSubmitting] = useState(false);
   const [dbError, setDbError] = useState(null);
-  const [cartItems, setCartItems] = useState([]);
+  
+  // Persistence Implementation for Guest Sessions
+  const [cartItems, setCartItems] = useState(() => {
+    const savedCart = localStorage.getItem("dkadris_guest_cart");
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
+  
   const [cartOpen, setCartOpen] = useState(false);
   const [favorites, setFavorites] = useState([]);
   const [imageIndex, setImageIndex] = useState(0);
@@ -79,6 +85,43 @@ export default function Catalog() {
   const [customNotes, setCustomNotes] = useState("");
   const [orderDone, setOrderDone] = useState(false);
   const [affiliateCode, setAffiliateCode] = useState("");
+
+  // Write variations down to localStorage storage context mirrors safely
+  useEffect(() => {
+    localStorage.setItem("dkadris_guest_cart", JSON.stringify(cartItems));
+  }, [cartItems]);
+
+  // Handle checking for active clearing countdown flags upon app-load mount
+  useEffect(() => {
+    const clearTimeStamp = localStorage.getItem("dkadris_cart_expiry");
+    if (clearTimeStamp) {
+      const remaining = parseInt(clearTimeStamp, 10) - Date.now();
+      if (remaining <= 0) {
+        setCartItems([]);
+        localStorage.removeItem("dkadris_guest_cart");
+        localStorage.removeItem("dkadris_cart_expiry");
+      } else {
+        const timer = setTimeout(() => {
+          setCartItems([]);
+          localStorage.removeItem("dkadris_guest_cart");
+          localStorage.removeItem("dkadris_cart_expiry");
+        }, remaining);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []);
+
+  const triggerCartExpiryCountdown = () => {
+    const fiveMinutes = 5 * 60 * 1000;
+    const expiryTime = Date.now() + fiveMinutes;
+    localStorage.setItem("dkadris_cart_expiry", expiryTime.toString());
+    
+    setTimeout(() => {
+      setCartItems([]);
+      localStorage.removeItem("dkadris_guest_cart");
+      localStorage.removeItem("dkadris_cart_expiry");
+    }, fiveMinutes);
+  };
 
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
@@ -133,22 +176,22 @@ export default function Catalog() {
     };
 
     try {
-      // Direct write into Supabase to populate your Admin order dashboard instantly
-      const { error } = await supabase.from("orders").insert([
+      // Synchronize database inserting with the keys expected by AdminOrders.jsx
+      const { data, error } = await supabase.from("orders").insert([
         {
           customer_name: custName,
           customer_phone: custPhone,
           customer_email: custEmail,
-          total_price: calculatedTotal,
-          status: "Pending",
+          total_amount: calculatedTotal, 
+          status: "pending", 
           items: [unifiedItem], 
+          affiliate_code: affiliateCode || null,
           created_at: new Date().toISOString()
         }
-      ]);
+      ]).select();
 
       if (error) throw error;
 
-      // Update cart state cleanly and filter variations out to avoid duplicates
       setCartItems(prev => {
         const cleaned = prev.filter(item => item.id !== selectedProduct?.id);
         return [...cleaned, unifiedItem];
@@ -182,7 +225,6 @@ export default function Catalog() {
   return (
     <div className="bg-[#0F1E36] text-white min-h-screen pt-24 pb-16 px-4 sm:px-6 relative">
       
-      {/* PERSISTENT FLOATING QUICK CART ACCESS BUTTON */}
       <button 
         onClick={() => setCartOpen(true)}
         className="fixed bottom-24 right-6 z-40 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all"
@@ -204,7 +246,6 @@ export default function Catalog() {
           <p className="text-slate-400 text-base">Explore premium custom denim and traditional structural designs crafted for individual dimensions.</p>
         </AnimatedElement>
 
-        {/* Filters and Inputs */}
         <div className="flex flex-col mb-10 border border-slate-800 p-4 rounded-2xl bg-[#16253D] shadow-2xl">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="relative w-full md:w-96">
@@ -246,7 +287,6 @@ export default function Catalog() {
           )}
         </div>
 
-        {/* Product Card Grid Ecosystem */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 gap-3">
             <div className="w-9 h-9 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
@@ -278,12 +318,13 @@ export default function Catalog() {
                   <h3 className="font-bold text-slate-950 text-sm sm:text-base tracking-tight mb-1 line-clamp-1">{product.name}</h3>
                   <p className="text-slate-600 text-xs line-clamp-2 mb-3 min-h-[2rem]">{product.description}</p>
                   
-                  <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 mt-auto">
+                  {/* Fixed responsive layout wraps items seamlessly without cropping */}
+                  <div className="mt-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-3 border-t border-slate-100">
                     <span className="text-amber-600 font-extrabold text-base sm:text-lg">₦{(product.price || 0).toLocaleString()}</span>
                     
                     <Dialog open={selectedProduct?.id === product.id} onOpenChange={(isOpen) => { if(isOpen) { setSelectedProduct(product); setImageIndex(0); setOrderDone(false); setActiveTab("ready"); } else { setSelectedProduct(null); } }}>
                       <DialogTrigger asChild>
-                        <Button className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl h-9 px-3 sm:px-4 transition-all">Quick View</Button>
+                        <Button className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl h-9 px-4 transition-all whitespace-nowrap">Quick View</Button>
                       </DialogTrigger>
             
                       <DialogContent className="bg-[#111F38] border-slate-800 max-w-4xl w-[95vw] h-[90vh] sm:h-[85vh] flex flex-col p-0 overflow-hidden text-white">
@@ -321,7 +362,7 @@ export default function Catalog() {
                                       {(Array.isArray(selectedProduct.colors) ? selectedProduct.colors : ["Indigo Blue", "Raw Black", "Stone Wash", "Burgundy"]).map(c => (
                                         <button key={c} type="button" onClick={() => setChosenColor(c)} className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${chosenColor === c ? "bg-white text-slate-950 border-white" : "bg-[#091324] border-slate-800 text-slate-300"}`}>{c}</button>
                                       ))}
-                                    </div>
+               </div>
                                   </div>
                    
                                   <div className="space-y-1.5">
@@ -336,6 +377,18 @@ export default function Catalog() {
                                     <Label className="text-xs font-bold uppercase text-slate-400">Affiliate Code (Optional)</Label>
                                     <Input value={affiliateCode} onChange={e => setAffiliateCode(e.target.value)} placeholder="e.g. PARTNER10" className="bg-[#091324] border-slate-700 rounded-xl h-10 text-sm text-white placeholder-slate-600" />
                                   </div>
+
+                                  {/* Faded white Garment Manual specification panel section */}
+                                  <div className="mt-4 space-y-3 border-t border-slate-800/80 pt-4">
+                                    <h4 className="text-[11px] uppercase font-bold tracking-wider text-amber-400">Garment Blueprint Manual</h4>
+                                    <div className="text-slate-400 text-xs leading-relaxed space-y-2">
+                                      <p><span className="text-slate-300 font-medium">Description:</span> {selectedProduct.description || "Premium tailor-crafted bespoke garment collection blueprint."}</p>
+                                      <p><span className="text-slate-300 font-medium">Fabric Type:</span> {selectedProduct.fabric_details || "Authentic heavy-duty raw denim composition weave."}</p>
+                                      <p><span className="text-slate-300 font-medium">Style Guide:</span> {selectedProduct.styling_recommendations || "Pairs optimally with custom luxury panel shirts and leather footwear variants."}</p>
+                                      <p><span className="text-slate-300 font-medium">Care Parameters:</span> {selectedProduct.care_instructions || "Turn inside out before cold machine washing cycles. Air dry safely."}</p>
+                                    </div>
+                                  </div>
+
                                   <Button onClick={handleProceedToBespoke} disabled={!chosenSize || !chosenColor} className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-5 rounded-xl text-xs tracking-widest uppercase shadow-lg mt-auto">Add & Continue to Bespoke Fitting</Button>
                                 </TabsContent>
 
@@ -381,7 +434,6 @@ export default function Catalog() {
 
                                       <div className="space-y-1"><Label className="text-[10px] font-bold uppercase text-slate-400">Styling Variations</Label><Textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} placeholder="Describe cuts, pocket options..." className="bg-[#091324] border-slate-700 rounded-xl text-xs h-14 resize-none text-white placeholder-slate-600" /></div>
 
-                                      {/* ERROR DISPLAY BANNER */}
                                       {dbError && (
                                         <div className="p-3 bg-red-950/80 border border-red-500 text-red-200 text-xs rounded-xl font-bold my-2 tracking-wide text-left">
                                           ⚠️ Database Error: {dbError}
@@ -411,7 +463,6 @@ export default function Catalog() {
           </div>
         )}
 
-        {/* HIGHLY VISIBLE RE-STYLED CART SLIDER */}
         {cartOpen && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
             <div className="w-full max-w-md bg-[#111F38] border-l border-slate-800 h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
@@ -449,71 +500,70 @@ export default function Catalog() {
               </div>
 
               {cartItems.length > 0 && (
-  <div className="p-6 border-t border-slate-800 bg-[#091324]">
-    <div className="flex justify-between text-white font-bold mb-5 text-lg">
-      <span>Total Subtotal</span>
-      <span className="text-amber-400 font-black">₦{cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}</span>
-    </div>
-    
-    <a 
-      href={`https://wa.me/2348163914835?text=${encodeURIComponent(
-        `*D-KADRIS BESPOKE ORDER*\n` +
-        `----------------------------------\n\n` +
-        cartItems.map(item => {
-          let block = `👕 *Garment:* ${item.name}\n` +
-                      `🎨 *Finish:* ${item.color} | *Size:* ${item.size} | *Qty:* ${item.qty}\n`;
-          
-          if (item.isCustom && item.measurements) {
-            block += `\n👤 *Client:* ${item.measurements.client}\n` +
-                     `📞 *Phone:* ${item.measurements.phone}\n` +
-                     `⚙️ *Fit Mapping:* ${item.fitPreference}\n\n` +
-                     `*MEASUREMENT PROFILE (Inches)*\n`;
-            
-            // Map out keys dynamically to check for non-empty string entries
-            const measurementLabels = [
-              ["Shoulder", item.measurements.shoulder],
-              ["Chest", item.measurements.chest],
-              ["Sleeve", item.measurements.sleeve],
-              ["Top Length", item.measurements.topLength],
-              ["Waist Line", item.measurements.waist],
-              ["Thigh", item.measurements.thigh],
-              ["Length", item.measurements.jeansLength]
-            ];
+                <div className="p-6 border-t border-slate-800 bg-[#091324]">
+                  <div className="flex justify-between text-white font-bold mb-5 text-lg">
+                    <span>Total Subtotal</span>
+                    <span className="text-amber-400 font-black">₦{cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}</span>
+                  </div>
+                  
+                  <a 
+                    onClick={triggerCartExpiryCountdown}
+                    href={`https://wa.me/2348163914835?text=${encodeURIComponent(
+                      `*D-KADRIS BESPOKE ORDER*\n` +
+                      `----------------------------------\n\n` +
+                      cartItems.map(item => {
+                        let block = `👕 *Garment:* ${item.name}\n` +
+                                    `🎨 *Finish:* ${item.color} | *Size:* ${item.size} | *Qty:* ${item.qty}\n`;
+                        
+                        if (item.isCustom && item.measurements) {
+                          block += `\n👤 *Client:* ${item.measurements.client}\n` +
+                                   `📞 *Phone:* ${item.measurements.phone}\n` +
+                                   `⚙️ *Fit Mapping:* ${item.fitPreference}\n\n` +
+                                   `*MEASUREMENT PROFILE (Inches)*\n`;
+                          
+                          const measurementLabels = [
+                            ["Shoulder", item.measurements.shoulder],
+                            ["Chest", item.measurements.chest],
+                            ["Sleeve", item.measurements.sleeve],
+                            ["Top Length", item.measurements.topLength],
+                            ["Waist Line", item.measurements.waist],
+                            ["Thigh", item.measurements.thigh],
+                            ["Length", item.measurements.jeansLength]
+                          ];
 
-            // Filter out entries that don't have text values typed in
-            const activeMeasurements = measurementLabels
-              .filter(([_, val]) => val && val.trim() !== "")
-              .map(([lbl, val]) => `• ${lbl}: ${val}"`);
+                          const activeMeasurements = measurementLabels
+                            .filter(([_, val]) => val && val.trim() !== "")
+                            .map(([lbl, val]) => `• ${lbl}: ${val}"`);
 
-            if (activeMeasurements.length > 0) {
-              block += activeMeasurements.join("\n") + `\n`;
-            } else {
-              block += `• No custom sizing parameters added\n`;
-            }
+                          if (activeMeasurements.length > 0) {
+                            block += activeMeasurements.join("\n") + `\n`;
+                          } else {
+                            block += `• No custom sizing parameters added\n`;
+                          }
 
-            if (item.measurements.notes && item.measurements.notes.trim() !== "") {
-              block += `\n📌 *Styling Variations:* ${item.measurements.notes}\n`;
-            }
-          }
+                          if (item.measurements.notes && item.measurements.notes.trim() !== "") {
+                            block += `\n📌 *Styling Variations:* ${item.measurements.notes}\n`;
+                          }
+                        }
 
-          if (item.affiliateCode && item.affiliateCode.trim() !== "") {
-            block += `\n🎟️ *Affiliate Tracking:* ${item.affiliateCode}\n`;
-          }
+                        if (item.affiliateCode && item.affiliateCode.trim() !== "") {
+                          block += `\n🎟️ *Affiliate Tracking:* ${item.affiliateCode}\n`;
+                        }
 
-          return block;
-        }).join("\n----------------------------------\n\n") +
-        `\n----------------------------------\n` +
-        `💰 *Total Gross:* ₦${cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}`
-      )}`} 
-      target="_blank" 
-      rel="noopener noreferrer"
-    >
-      <Button className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl py-6 tracking-widest uppercase text-xs shadow-xl transition-all">
-        <MessageCircle className="mr-2 h-4 w-4 stroke-[2.5]" /> Checkout via WhatsApp
-      </Button>
-    </a>
-  </div>
-)}
+                        return block;
+                      }).join("\n----------------------------------\n\n") +
+                      `\n----------------------------------\n` +
+                      `💰 *Total Gross:* ₦${cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}`
+                    )}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    <Button className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl py-6 tracking-widest uppercase text-xs shadow-xl transition-all">
+                      <MessageCircle className="mr-2 h-4 w-4 stroke-[2.5]" /> Checkout via WhatsApp
+                    </Button>
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -524,4 +574,4 @@ export default function Catalog() {
       </div>
     </div>
   );
-}
+                                  }
