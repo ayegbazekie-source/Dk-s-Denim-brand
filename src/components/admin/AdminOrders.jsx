@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase"; // Updated client module path
+import { supabase } from "@/lib/supabase"; 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -20,14 +20,13 @@ export default function AdminOrders() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
-  // Load orders data from Postgres via Supabase client sorted by date descending
   const load = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from("orders")
         .select("*")
-        .order("created_at", { ascending: false }); // Replaces base44's "-created_date" sorting mechanisms
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setOrders(data || []);
@@ -40,60 +39,107 @@ export default function AdminOrders() {
 
   useEffect(() => { load(); }, []);
 
-  // Update tracking milestone strings for specific transactions
-  const updateStatus = async (id, status) => {
+  // Centralized workflow handler for state switches
+  const updateStatus = async (id, targetStatus, orderContext) => {
     setUpdating(true);
     try {
+      // 1. Update order status step
       const { error } = await supabase
         .from("orders")
-        .update({ status })
+        .update({ status: targetStatus })
         .eq("id", id);
 
       if (error) throw error;
 
+      // 2. Automate Affiliate Commissions (10%) on 'Processing'
+      if (targetStatus === "processing" && orderContext?.affiliate_code) {
+        const orderValue = orderContext.total_amount || orderContext.total || 0;
+        const payoutSum = orderValue * 0.10;
+
+        await supabase.from("affiliate_transactions").insert([{
+          code: orderContext.affiliate_code,
+          amount: payoutSum,
+          type: "credit",
+          order_id: id,
+          created_at: new Date().toISOString()
+        }]);
+      }
+
+      // 3. Automate Notification Emails for 'processing' and 'delivered'
+      if (orderContext?.customer_email) {
+        let textBody = "";
+        let subjectLine = "";
+
+        if (targetStatus === "processing") {
+          subjectLine = "Your D-Kadris Order is Booked! 📝";
+          textBody = `Hello ${orderContext.customer_name},\n\nYour custom order has been verified and is now under production setup. Estimated timeframe for tailoring completion and delivery dispatch is 3 to 7 business days.\n\nThank you for choosing D-Kadris.`;
+          await sendAutomatedNotification(orderContext.customer_email, orderContext.customer_name, subjectLine, textBody);
+        } else if (targetStatus === "delivered") {
+          subjectLine = "Your D-Kadris Order is Ready for Collection! 📦";
+          textBody = `Hello ${orderContext.customer_name},\n\nExcellent news! Your custom apparel is complete and ready for pickup. Please contact administration directly at +2348163914835 to coordinate logistics.\n\nBest regards,\nD-Kadris Atelier Team.`;
+          await sendAutomatedNotification(orderContext.customer_email, orderContext.customer_name, subjectLine, textBody);
+        }
+      }
+
       if (selected?.id === id) {
-        setSelected(o => ({ ...o, status }));
+        setSelected(o => ({ ...o, status: targetStatus }));
       }
       load();
     } catch (err) {
-      console.error("Error updating order status:", err.message);
-      alert(`Database update error: ${err.message}`);
+      console.error("Error running status transitions:", err.message);
+      alert(`Pipeline error: ${err.message}`);
     } finally {
       setUpdating(false);
     }
   };
 
-// Inside sendReadyEmail() in AdminOrders.jsx
-const sendReadyEmail = async (order) => {
-  setSendingEmail(true);
-  try {
-    const emailResponse = await fetch("https://your-worker-name.your-subdomain.workers.dev", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: order.customer_email,
-        toName: order.customer_name,
-        subject: `Your D-Kadris Order is Ready! 📦`,
-        body: emailMsg // The custom message text typed in your admin dashboard textarea
-      }),
-    });
-
-    if (emailResponse.ok) {
-      setEmailSent(true);
-      setTimeout(() => {
-        setEmailSent(false);
-        setEmailMsg("");
-      }, 4000);
-    } else {
-      throw new Error("Email worker request rejected.");
+  const sendAutomatedNotification = async (email, name, subject, bodyText) => {
+    try {
+      await fetch("https://your-worker-name.your-subdomain.workers.dev", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: email,
+          toName: name,
+          subject: subject,
+          body: bodyText
+        }),
+      });
+    } catch (err) {
+      console.error("Silent notification fail:", err);
     }
-  } catch (err) {
-    console.error("Error sending communication:", err);
-    alert("Could not deliver notification email via serverless routing.");
-  } finally {
-    setSendingEmail(false);
-  }
-};
+  };
+
+  const sendReadyEmail = async (order) => {
+    setSendingEmail(true);
+    try {
+      const emailResponse = await fetch("https://your-worker-name.your-subdomain.workers.dev", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: order.customer_email,
+          toName: order.customer_name,
+          subject: `D-Kadris Production Update ⚡`,
+          body: emailMsg 
+        }),
+      });
+
+      if (emailResponse.ok) {
+        setEmailSent(true);
+        setTimeout(() => {
+          setEmailSent(false);
+          setEmailMsg("");
+        }, 4000);
+      } else {
+        throw new Error("Email worker request rejected.");
+      }
+    } catch (err) {
+      console.error("Error sending communication:", err);
+      alert("Could not deliver notification email.");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   const filtered = orders.filter(o => {
     const matchesSearch = !search || 
@@ -142,7 +188,11 @@ const sendReadyEmail = async (order) => {
                   <p className="font-bold">{o.customer_name || "Guest User"}</p>
                   <p className="text-muted-foreground text-xs">{o.customer_email}</p>
                 </td>
-                <td className="p-4 text-accent font-bold">₦{(o.total_amount || o.total || 0).toLocaleString()}</td>
+                {/* Fixed cross-component metric map mismatch field to prevent displaying ₦0 */}
+                <td className="p-4 text-accent font-bold">
+                  {/* Pulls from total_amount directly matching Catalog inserts */}
+                  ₦{(o.total_amount || o.total || 0).toLocaleString()}
+                </td>
                 <td className="p-4 text-muted-foreground">
                   {Array.isArray(o.items) ? o.items.length : o.total_items || 1} items
                 </td>
@@ -171,17 +221,18 @@ const sendReadyEmail = async (order) => {
                 <div><p className="text-muted-foreground text-xs uppercase tracking-wide">Email Address</p><p className="text-card-foreground font-medium mt-0.5">{selected.customer_email}</p></div>
                 <div><p className="text-muted-foreground text-xs uppercase tracking-wide">Phone Number</p><p className="text-card-foreground font-medium mt-0.5">{selected.customer_phone || "—"}</p></div>
                 <div><p className="text-muted-foreground text-xs uppercase tracking-wide">Order Date</p><p className="text-card-foreground font-medium mt-0.5">{selected.created_at ? new Date(selected.created_at).toLocaleDateString() : "—"}</p></div>
-                <div className="col-span-2"><p className="text-muted-foreground text-xs uppercase tracking-wide">Delivery Address</p><p className="text-card-foreground font-medium mt-0.5">{selected.shipping_address || selected.address || "—"}</p></div>
+                {selected.affiliate_code && (
+                  <div className="col-span-2"><p className="text-muted-foreground text-xs uppercase tracking-wide">Affiliate Partner Applied</p><p className="text-amber-500 font-bold mt-0.5">{selected.affiliate_code}</p></div>
+                )}
               </div>
 
-              {/* Items Summary Breakdown */}
               <div className="border-t border-border pt-4">
                 <p className="text-muted-foreground text-xs uppercase tracking-wide mb-2">Garments Summary</p>
                 <div className="bg-muted/30 rounded-xl p-3 space-y-2 border border-border/40">
                   {Array.isArray(selected.items) ? selected.items.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-center text-sm">
-                      <div><span className="font-bold text-card-foreground">{item.name || "Custom Apparel"}</span><span className="text-muted-foreground text-xs ml-2">x{item.quantity || 1}</span></div>
-                      <span className="font-medium text-accent">₦{((item.price || 0) * (item.quantity || 1)).toLocaleString()}</span>
+                      <div><span className="font-bold text-card-foreground">{item.name || "Custom Apparel"}</span><span className="text-muted-foreground text-xs ml-2">x{item.qty || item.quantity || 1}</span></div>
+                      <span className="font-medium text-accent">₦{((item.price || 0) * (item.qty || item.quantity || 1)).toLocaleString()}</span>
                     </div>
                   )) : (
                     <p className="text-sm text-card-foreground font-medium">Bespoke Design Production Package</p>
@@ -193,12 +244,11 @@ const sendReadyEmail = async (order) => {
                 </div>
               </div>
 
-              {/* Status Update Trigger Map */}
               <div className="border-t border-border pt-4">
                 <p className="text-muted-foreground text-xs uppercase tracking-wide mb-2">Update Order Pipeline Step</p>
                 <div className="flex flex-wrap gap-1.5">
                   {STATUS_OPTIONS.map(s => (
-                    <button key={s} onClick={() => updateStatus(selected.id, s)} disabled={updating}
+                    <button key={s} onClick={() => updateStatus(selected.id, s, selected)} disabled={updating}
                       className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all capitalize ${selected.status === s ? statusColor[s] : "bg-muted text-muted-foreground hover:bg-muted/70"}`}>
                       {s}
                     </button>
@@ -206,20 +256,19 @@ const sendReadyEmail = async (order) => {
                 </div>
               </div>
 
-              {/* Ready Notification Communications Area */}
               {selected.status === "processing" && (
                 <div className="border-t border-border pt-4">
-                  <p className="text-muted-foreground text-xs uppercase tracking-wide mb-2">Order Status Notification</p>
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide mb-2">Custom Shop Communication Update</p>
                   {emailSent ? (
                     <div className="bg-accent/10 border border-accent/30 rounded-xl p-3 text-accent font-bold text-sm flex items-center gap-2">
                       <Check className="h-4 w-4" /> Email sent to {selected.customer_email}
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <textarea value={emailMsg} onChange={e => setEmailMsg(e.target.value)} placeholder={`Type a message to ${selected.customer_name || "the customer"}...`}
+                      <textarea value={emailMsg} onChange={e => setEmailMsg(e.target.value)} placeholder={`Type bespoke status update message to send...`}
                         className="w-full bg-muted border border-border rounded-xl p-3 text-card-foreground text-sm placeholder:text-muted-foreground min-h-[80px] focus:outline-none focus:ring-2 focus:ring-accent/40 resize-none" />
                       <Button onClick={() => sendReadyEmail(selected)} disabled={sendingEmail || !emailMsg.trim()} className="bg-accent text-accent-foreground font-bold rounded-full px-6 py-2.5 hover:scale-105 transition-all flex items-center gap-2 text-sm">
-                        <Send className="h-4 w-4" /> {sendingEmail ? "Sending..." : "Send 'Order Ready' Email"}
+                        <Send className="h-4 w-4" /> {sendingEmail ? "Sending..." : "Send Shop Update Email"}
                       </Button>
                     </div>
                   )}
@@ -231,4 +280,5 @@ const sendReadyEmail = async (order) => {
       </Dialog>
     </div>
   );
-}
+                }
+                    
