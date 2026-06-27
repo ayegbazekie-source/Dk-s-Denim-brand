@@ -67,7 +67,7 @@ export default function Affiliate() {
         .from("affiliates")
         .select("*")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
       
       if (!error && data) {
         setAffiliate(data);
@@ -151,7 +151,7 @@ export default function Affiliate() {
           .from("affiliates")
           .select("email, phone")
           .eq("referral_code", cleanReferral)
-          .single();
+          .maybeSingle();
 
         if (matchingReferrer && (matchingReferrer.email === cleanEmail || matchingReferrer.phone === cleanPhone)) {
           setError("Self-referral is not permitted. You cannot use your own affiliate code.");
@@ -188,7 +188,8 @@ export default function Affiliate() {
           joined_date: new Date().toISOString(),
           last_active_date: new Date().toISOString(),
           referred_by: cleanReferral || null,
-          payout_requested: false
+          payout_requested: false,
+          failed_login_attempts: 0
         }])
         .select()
         .single();
@@ -201,7 +202,7 @@ export default function Affiliate() {
           .from("affiliates")
           .select("id, total_earnings, pending_payout")
           .eq("referral_code", cleanReferral)
-          .single();
+          .maybeSingle();
 
         if (referrer) {
           await supabase
@@ -213,9 +214,6 @@ export default function Affiliate() {
             .eq("id", referrer.id);
         }
       }
-
-      // Note: For sending transactional emails via Supabase, it is highly recommended to set up 
-      // an Edge Function or Database Webhook listener rather than doing raw client integrations.
       
       setAffiliate(newAffiliate);
       setLoggedIn(true);
@@ -228,37 +226,116 @@ export default function Affiliate() {
     e.preventDefault();
     setError("");
 
-    if (!checkRateLimit("login", 3, 60000)) {
-      setError("Too many login attempts. Please wait 1 minute and try again.");
+    if (!checkRateLimit("login", 5, 60000)) {
+      setError("Too many validation attempts. Please hold for 1 minute.");
       return;
     }
 
-    const cleanEmail = sanitize(loginForm.email).toLowerCase();
+    const cleanEmail = sanitize(loginForm.email).trim().toLowerCase();
     setSubmitting(true);
 
     try {
+      // 1. Gather profile security parameters before checking passwords
+      const { data: profile } = await supabase
+        .from("affiliates")
+        .select("id, status, failed_login_attempts, lockout_until")
+        .eq("email", cleanEmail)
+        .maybeSingle();
+
+      if (profile) {
+        if (profile.status === "suspended") {
+          setError("Account frozen due to security failure rules or dormancy. Contact management.");
+          setSubmitting(false);
+          return;
+        }
+        if (profile.lockout_until && new Date(profile.lockout_until) > new Date()) {
+          const remainingMins = Math.ceil((new Date(profile.lockout_until) - new Date()) / 60000);
+          setError(`Security Hold active. Try again in ${remainingMins} minutes.`);
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // 2. Perform Primary Supabase Authentication Pass
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: loginForm.password,
       });
 
-      if (authError) throw authError;
+      // 3. Handle Failure Scenarios gracefully
+      if (authError) {
+        if (profile) {
+          let currentFailures = (profile.failed_login_attempts || 0) + 1;
+          let updatePayload = { failed_login_attempts: currentFailures };
 
-      const { data: profile, error: profileError } = await supabase
-        .from("affiliates")
-        .select("*")
-        .eq("id", authData.user.id)
-        .single();
-
-      if (profileError || !profile) {
-        setError("No affiliate record found associated with this account credentials.");
+          if (currentFailures === 3) {
+            updatePayload.lockout_until = new Date(Date.now() + 10 * 60000).toISOString();
+            setError("Incorrect credentials 3 times. Security window locked for 10 minutes.");
+          } else if (currentFailures >= 5) {
+            updatePayload.status = "suspended";
+            setError("Profile frozen permanently after 5 continuous failures. Contact support.");
+          } else {
+            setError("Invalid email or password structure. Please try again.");
+          }
+          await supabase.from("affiliates").update(updatePayload).eq("id", profile.id);
+        } else {
+          setError("Invalid authentication details.");
+        }
         return;
       }
 
-      setAffiliate(profile);
+      // 4. Post-Login Configuration Match verification
+      let { data: verifiedProfile } = await supabase
+        .from("affiliates")
+        .select("*")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+
+      // Fix popup blocks for all users by safely creating a database record on-the-fly if it was missed
+      if (!verifiedProfile) {
+        const code = generateCode(cleanEmail.split("@")[0]);
+        const { data: autoRepairedProfile, error: repairError } = await supabase
+          .from("affiliates")
+          .insert([{
+            id: authData.user.id,
+            name: cleanEmail.split("@")[0],
+            email: cleanEmail,
+            phone: "",
+            referral_code: code,
+            total_clicks: 0,
+            orders_generated: 0,
+            total_earnings: 500,
+            pending_payout: 500,
+            paid_commissions: 0,
+            status: "pending",
+            joined_date: new Date().toISOString(),
+            last_active_date: new Date().toISOString(),
+            payout_requested: false,
+            failed_login_attempts: 0
+          }])
+          .select()
+          .single();
+
+        if (repairError) throw new Error("Could not initialize your tracking profile configuration parameters.");
+        verifiedProfile = autoRepairedProfile;
+      } else {
+        // Clear parameters down on normal verification pass
+        await supabase
+          .from("affiliates")
+          .update({ failed_login_attempts: 0, lockout_until: null })
+          .eq("id", authData.user.id);
+      }
+
+      if (verifiedProfile.status === "suspended") {
+        setError("Account frozen due to security failure rules or dormancy. Contact management.");
+        await supabase.auth.signOut();
+        return;
+      }
+
+      setAffiliate(verifiedProfile);
       setLoggedIn(true);
     } catch (err) {
-      setError(err.message || "Login failed. Please verify your credentials.");
+      setError(err.message || "An unexpected validation exception occurred.");
     } finally { setSubmitting(false); }
   };
 
