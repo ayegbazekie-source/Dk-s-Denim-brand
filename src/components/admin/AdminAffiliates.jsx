@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase"; // Updated client module path
+import { supabase } from "@/lib/supabase"; 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Eye, Users, Check, Bell } from "lucide-react";
+import { Search, Eye, Users, Check, Bell, ShieldAlert } from "lucide-react";
 
 const STATUS_EMAILS = {
   pending: {
@@ -41,7 +41,7 @@ export default function AdminAffiliates() {
       const { data, error } = await supabase
         .from("affiliates")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("joined_date", { ascending: false });
 
       if (error) throw error;
       setAffiliates(data || []);
@@ -60,16 +60,22 @@ export default function AdminAffiliates() {
     try {
       const aff = affiliates.find(a => a.id === id) || selected;
 
+      // Construct payload variables explicitly
+      const updatePayload = { status };
+      
+      // Reset security failure logs if manually transitioning away from suspended state
+      if (status !== "suspended") {
+        updatePayload.failed_login_attempts = 0;
+        updatePayload.lockout_until = null;
+      }
+
       const { error } = await supabase
         .from("affiliates")
-        .update({ status })
+        .update(updatePayload)
         .eq("id", id);
 
-      if (error) throw error; // 1. Wait for database update to finish successfully
+      if (error) throw error; 
 
-      // ======================================================================
-      // INSERTED BLOCK START: Fire off the Cloudflare Worker notification
-      // ======================================================================
       if (aff?.email && STATUS_EMAILS[status]) {
         const tmpl = STATUS_EMAILS[status];
         const body = status === "active" 
@@ -77,11 +83,12 @@ export default function AdminAffiliates() {
           : tmpl.body(aff.name);
         
         try {
-          // Fire off backend worker request trigger
+          // Fire off backend Cloudflare worker request trigger using official administrator account email parameters
           const emailResponse = await fetch("https://your-worker-name.your-subdomain.workers.dev", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              from: "admin@d-kadrisdenims.com",
               to: aff.email,
               toName: aff.name,
               subject: tmpl.subject,
@@ -96,12 +103,14 @@ export default function AdminAffiliates() {
           console.error("Failed to connect to email worker:", emailErr);
         }
       }
-      // ======================================================================
-      // INSERTED BLOCK END
-      // ======================================================================
 
-      if (selected?.id === id) setSelected(a => ({ ...a, status }));
-      load(); // Refresh layout statistics from database values
+      if (selected?.id === id) {
+        setSelected(a => ({ 
+          ...a, 
+          ...updatePayload 
+        }));
+      }
+      load(); 
     } catch (err) {
       console.error("Error updating affiliate status:", err.message);
       alert(`Database restriction issue: ${err.message}`);
@@ -180,40 +189,50 @@ export default function AdminAffiliates() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {filtered.map(a => (
-              <tr key={a.id} className={`text-card-foreground hover:bg-muted/20 transition-colors ${a.payout_requested ? "bg-orange-400/5 border-l-4 border-l-orange-400" : ""}`}>
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-accent font-black text-sm">{a.name?.[0] || "?"}</span>
+            {filtered.map(a => {
+              const isLockedOut = a.lockout_until && new Date(a.lockout_until) > new Date();
+              return (
+                <tr key={a.id} className={`text-card-foreground hover:bg-muted/20 transition-colors ${a.payout_requested ? "bg-orange-400/5 border-l-4 border-l-orange-400" : ""}`}>
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                        <span className="text-accent font-black text-sm">{a.name?.[0] || "?"}</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-bold">{a.name}</p>
+                          {isLockedOut && (
+                            <span className="text-orange-400" title="Temporary Login Lockout Active">
+                              <ShieldAlert className="h-3.5 w-3.5" />
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-muted-foreground text-xs">{a.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold">{a.name}</p>
-                      <p className="text-muted-foreground text-xs">{a.email}</p>
+                  </td>
+                  <td className="p-4 font-mono text-accent font-bold">{a.referral_code}</td>
+                  <td className="p-4">{a.orders_generated || 0}</td>
+                  <td className="p-4 text-accent font-bold">₦{(a.total_earnings || 0).toLocaleString()}</td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-orange-400 font-bold">₦{(a.pending_payout || 0).toLocaleString()}</span>
+                      {a.payout_requested && (
+                        <span className="inline-flex items-center gap-1 bg-orange-400 text-white text-xs font-black px-2 py-0.5 rounded-full animate-pulse">
+                          PAYMENT REQUESTED
+                        </span>
+                      )}
                     </div>
-                  </div>
-                </td>
-                <td className="p-4 font-mono text-accent font-bold">{a.referral_code}</td>
-                <td className="p-4">{a.orders_generated || 0}</td>
-                <td className="p-4 text-accent font-bold">₦{(a.total_earnings || 0).toLocaleString()}</td>
-                <td className="p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-orange-400 font-bold">₦{(a.pending_payout || 0).toLocaleString()}</span>
-                    {a.payout_requested && (
-                      <span className="inline-flex items-center gap-1 bg-orange-400 text-white text-xs font-black px-2 py-0.5 rounded-full animate-pulse">
-                        PAYMENT REQUESTED
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="p-4">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${statusColor[a.status] || "text-muted-foreground bg-muted"}`}>{a.status || "pending"}</span>
-                </td>
-                <td className="p-4">
-                  <button onClick={() => setSelected(a)} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground"><Eye className="h-4 w-4" /></button>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="p-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${statusColor[a.status] || "text-muted-foreground bg-muted"}`}>{a.status || "pending"}</span>
+                  </td>
+                  <td className="p-4">
+                    <button onClick={() => setSelected(a)} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground"><Eye className="h-4 w-4" /></button>
+                  </td>
+                </tr>
+              );
+            })}
             {filtered.length === 0 && !loading && (
               <tr><td colSpan={7} className="py-12 text-center text-muted-foreground"><Users className="h-10 w-10 mx-auto mb-2 opacity-30" />No affiliates found</td></tr>
             )}
@@ -237,6 +256,22 @@ export default function AdminAffiliates() {
                 </div>
               )}
 
+              {selected.failed_login_attempts > 0 && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-xs flex flex-col gap-1">
+                  <p className="text-destructive font-bold flex items-center gap-1">
+                    <ShieldAlert className="h-3.5 w-3.5" /> Security Diagnostics Information
+                  </p>
+                  <p className="text-muted-foreground">
+                    Failed auth counter status: <strong className="text-card-foreground">{selected.failed_login_attempts} / 5 consecutive attempts</strong>.
+                  </p>
+                  {selected.lockout_until && new Date(selected.lockout_until) > new Date() && (
+                    <p className="text-orange-400 font-medium">
+                      Temporary 10-minute hold window expires: {new Date(selected.lockout_until).toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4 text-sm">
                 {[["Name", selected.name], ["Email", selected.email], ["Phone", selected.phone], ["Referral Code", selected.referral_code], ["Joined", selected.joined_date ? new Date(selected.joined_date).toLocaleDateString() : "—"], ["Last Active", selected.last_active_date ? new Date(selected.last_active_date).toLocaleDateString() : "—"], ["Referred By", selected.referred_by], ["Total Clicks", selected.total_clicks], ["Orders Generated", selected.orders_generated], ["Total Earnings", `₦${(selected.total_earnings || 0).toLocaleString()}`], ["Paid Commissions", `₦${(selected.paid_commissions || 0).toLocaleString()}`], ["Bank", selected.bank_name], ["Account", selected.account_name && selected.account_number ? `${selected.account_name} — ${selected.account_number}` : null]].filter(([, v]) => v != null && v !== "").map(([label, value]) => (
                   <div key={label}>
@@ -256,7 +291,7 @@ export default function AdminAffiliates() {
                     </button>
                   ))}
                 </div>
-                <p className="text-muted-foreground text-xs mt-2">Changing status automatically sends an email notification to the affiliate.</p>
+                <p className="text-muted-foreground text-xs mt-2">Changing status automatically sends an email notification from admin@d-kadrisdenims.com and purges active lockout counters if set back to a functional status.</p>
               </div>
 
               {(selected.pending_payout || 0) > 0 && (
@@ -277,4 +312,4 @@ export default function AdminAffiliates() {
       </Dialog>
     </div>
   );
-}
+        }
