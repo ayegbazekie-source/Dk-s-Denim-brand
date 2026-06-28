@@ -235,6 +235,7 @@ export default function Affiliate() {
     setSubmitting(true);
 
     try {
+      await supabase.auth.signOut();
       // 1. Gather profile security parameters before checking passwords
       const { data: profile } = await supabase
         .from("affiliates")
