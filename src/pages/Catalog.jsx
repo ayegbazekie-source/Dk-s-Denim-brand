@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom"; // Added useSearchParams for tracking URL parameters
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,7 @@ const AnimatedElement = ({ children, className, delay = 0 }) => {
 };
 
 export default function Catalog() {
+  const [searchParams] = useSearchParams(); // Hook to read ?ref= parameter from current path
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -84,7 +85,21 @@ export default function Catalog() {
   const [jeansLength, setJeansLength] = useState("");
   const [customNotes, setCustomNotes] = useState("");
   const [orderDone, setOrderDone] = useState(false);
-  const [affiliateCode, setAffiliateCode] = useState("");
+  
+  // Initialize tracking code state dynamically from localStorage if present
+  const [affiliateCode, setAffiliateCode] = useState(() => {
+    return localStorage.getItem("dkadris_affiliate_ref") || "";
+  });
+
+  // Effect to capture incoming link referral parameter strings securely
+  useEffect(() => {
+    const refParam = searchParams.get("ref");
+    if (refParam) {
+      const sanitizedCode = refParam.trim().toUpperCase();
+      localStorage.setItem("dkadris_affiliate_ref", sanitizedCode);
+      setAffiliateCode(sanitizedCode); // Instantly populates active view states
+    }
+  }, [searchParams]);
 
   // Write variations down to localStorage storage context mirrors safely
   useEffect(() => {
@@ -198,10 +213,10 @@ export default function Catalog() {
       });
       setOrderDone(true);
 
-      // Clear fields safely
+      // Clear layout fields safely while leaving affiliate tracking cookies intact for global session longevity
       setCustName(""); setCustPhone(""); setCustEmail(""); setCustomNotes("");
       setShoulder(""); setChest(""); setSleeve(""); setTopLength(""); setWaist(""); setThigh("");
-      setJeansLength(""); setChosenSize(""); setChosenColor(""); setQty(1); setAffiliateCode("");
+      setJeansLength(""); setChosenSize(""); setChosenColor(""); setQty(1);
     } catch (err) {
       console.error("Database connection panel error:", err.message);
       setDbError(err.message || "Failed to sync order with database.");
@@ -356,16 +371,7 @@ export default function Catalog() {
                                       ))}
                                     </div>
                                   </div>
-                                  <div className="space-y-1.5">
-                                    <Label className="text-xs font-bold uppercase text-slate-400">Select Finish</Label>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {(Array.isArray(selectedProduct.colors) ? selectedProduct.colors : ["Indigo Blue", "Raw Black", "Stone Wash", "Burgundy"]).map(c => (
-                                        <button key={c} type="button" onClick={() => setChosenColor(c)} className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${chosenColor === c ? "bg-white text-slate-950 border-white" : "bg-[#091324] border-slate-800 text-slate-300"}`}>{c}</button>
-                                      ))}
-               </div>
-                                  </div>
-                   
-                                  <div className="space-y-1.5">
+                    <div className="space-y-1.5">
                                     <Label className="text-xs font-bold uppercase text-slate-400">Quantity</Label>
                                     <div className="flex items-center gap-3 border border-slate-800 w-max rounded-xl p-1 bg-[#091324]">
                                       <button type="button" onClick={() => setQty(p => Math.max(1, p - 1))} className="w-8 h-8 hover:bg-slate-800 rounded-lg font-bold text-lg">-</button>
@@ -375,7 +381,12 @@ export default function Catalog() {
                                   </div>
                                   <div className="space-y-1.5">
                                     <Label className="text-xs font-bold uppercase text-slate-400">Affiliate Code (Optional)</Label>
-                                    <Input value={affiliateCode} onChange={e => setAffiliateCode(e.target.value)} placeholder="e.g. PARTNER10" className="bg-[#091324] border-slate-700 rounded-xl h-10 text-sm text-white placeholder-slate-600" />
+                                    <Input value={affiliateCode} onChange={e => setAffiliateCode(e.target.value.toUpperCase())} placeholder="e.g. PARTNER10" className="bg-[#091324] border-slate-700 rounded-xl h-10 text-sm text-white placeholder-slate-600" />
+                                    {localStorage.getItem("dkadris_affiliate_ref") && (
+                                      <p className="text-[11px] text-emerald-400 font-semibold mt-1 flex items-center gap-1">
+                                        <Check className="h-3 w-3 stroke-[3]" /> Referral code auto-applied from link.
+                                      </p>
+                                    )}
                                   </div>
 
                                   {/* Faded white Garment Manual specification panel section */}
@@ -574,4 +585,4 @@ export default function Catalog() {
       </div>
     </div>
   );
-                                  }
+}
