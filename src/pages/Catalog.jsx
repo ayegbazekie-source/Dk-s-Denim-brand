@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useSearchParams } from "react-router-dom"; // Added useSearchParams for tracking URL parameters
+import { Link } from "react-router-dom"; // Swapped out useSearchParams to prevent route conflicts
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +42,6 @@ const AnimatedElement = ({ children, className, delay = 0 }) => {
 };
 
 export default function Catalog() {
-  const [searchParams] = useSearchParams(); // Hook to read ?ref= parameter from current path
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -86,22 +85,23 @@ export default function Catalog() {
   const [customNotes, setCustomNotes] = useState("");
   const [orderDone, setOrderDone] = useState(false);
   
-  // Initialize tracking code state dynamically from localStorage if present
+  // Initialize tracking code state dynamically from localStorage
   const [affiliateCode, setAffiliateCode] = useState(() => {
     return localStorage.getItem("dkadris_affiliate_ref") || "";
   });
 
-  // Effect to capture incoming link referral parameter strings securely
+  // Native URL query parameter parsing to prevent React Router redirect bugs
   useEffect(() => {
-    const refParam = searchParams.get("ref");
+    const params = new URLSearchParams(window.location.search);
+    const refParam = params.get("ref");
     if (refParam) {
       const sanitizedCode = refParam.trim().toUpperCase();
       localStorage.setItem("dkadris_affiliate_ref", sanitizedCode);
-      setAffiliateCode(sanitizedCode); // Instantly populates active view states
+      setAffiliateCode(sanitizedCode);
     }
-  }, [searchParams]);
+  }, []);
 
-  // Write variations down to localStorage storage context mirrors safely
+  // Sync variations down to localStorage safely
   useEffect(() => {
     localStorage.setItem("dkadris_guest_cart", JSON.stringify(cartItems));
   }, [cartItems]);
@@ -191,7 +191,6 @@ export default function Catalog() {
     };
 
     try {
-      // Synchronize database inserting with the keys expected by AdminOrders.jsx
       const { data, error } = await supabase.from("orders").insert([
         {
           customer_name: custName,
@@ -213,7 +212,6 @@ export default function Catalog() {
       });
       setOrderDone(true);
 
-      // Clear layout fields safely while leaving affiliate tracking cookies intact for global session longevity
       setCustName(""); setCustPhone(""); setCustEmail(""); setCustomNotes("");
       setShoulder(""); setChest(""); setSleeve(""); setTopLength(""); setWaist(""); setThigh("");
       setJeansLength(""); setChosenSize(""); setChosenColor(""); setQty(1);
@@ -333,11 +331,21 @@ export default function Catalog() {
                   <h3 className="font-bold text-slate-950 text-sm sm:text-base tracking-tight mb-1 line-clamp-1">{product.name}</h3>
                   <p className="text-slate-600 text-xs line-clamp-2 mb-3 min-h-[2rem]">{product.description}</p>
                   
-                  {/* Fixed responsive layout wraps items seamlessly without cropping */}
                   <div className="mt-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-3 border-t border-slate-100">
                     <span className="text-amber-600 font-extrabold text-base sm:text-lg">₦{(product.price || 0).toLocaleString()}</span>
                     
-                    <Dialog open={selectedProduct?.id === product.id} onOpenChange={(isOpen) => { if(isOpen) { setSelectedProduct(product); setImageIndex(0); setOrderDone(false); setActiveTab("ready"); } else { setSelectedProduct(null); } }}>
+                    <Dialog open={selectedProduct?.id === product.id} onOpenChange={(isOpen) => { 
+                      if (isOpen) { 
+                        setSelectedProduct(product); 
+                        setImageIndex(0); 
+                        setOrderDone(false); 
+                        setActiveTab("ready");
+                        // Guaranteed lookup on dialog open
+                        setAffiliateCode(localStorage.getItem("dkadris_affiliate_ref") || "");
+                      } else { 
+                        setSelectedProduct(null); 
+                      } 
+                    }}>
                       <DialogTrigger asChild>
                         <Button className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl h-9 px-4 transition-all whitespace-nowrap">Quick View</Button>
                       </DialogTrigger>
@@ -371,7 +379,16 @@ export default function Catalog() {
                                       ))}
                                     </div>
                                   </div>
-                    <div className="space-y-1.5">
+                                  <div className="space-y-1.5">
+    <Label className="text-xs font-bold uppercase text-slate-400">Select Finish</Label>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {(Array.isArray(selectedProduct.colors) ? selectedProduct.colors : ["Indigo Blue", "Raw Black", "Stone Wash", "Burgundy"]).map(c => (
+                                        <button key={c} type="button" onClick={() => setChosenColor(c)} className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${chosenColor === c ? "bg-white text-slate-950 border-white" : "bg-[#091324] border-slate-800 text-slate-300"}`}>{c}</button>
+                                      ))}
+                                    </div>
+                                  </div>
+                   
+                                  <div className="space-y-1.5">
                                     <Label className="text-xs font-bold uppercase text-slate-400">Quantity</Label>
                                     <div className="flex items-center gap-3 border border-slate-800 w-max rounded-xl p-1 bg-[#091324]">
                                       <button type="button" onClick={() => setQty(p => Math.max(1, p - 1))} className="w-8 h-8 hover:bg-slate-800 rounded-lg font-bold text-lg">-</button>
@@ -384,12 +401,11 @@ export default function Catalog() {
                                     <Input value={affiliateCode} onChange={e => setAffiliateCode(e.target.value.toUpperCase())} placeholder="e.g. PARTNER10" className="bg-[#091324] border-slate-700 rounded-xl h-10 text-sm text-white placeholder-slate-600" />
                                     {localStorage.getItem("dkadris_affiliate_ref") && (
                                       <p className="text-[11px] text-emerald-400 font-semibold mt-1 flex items-center gap-1">
-                                        <Check className="h-3 w-3 stroke-[3]" /> Referral code auto-applied from link.
+                                        <Check className="h-3 w-3 stroke-[3]" /> Referral code auto-applied from session memory.
                                       </p>
                                     )}
                                   </div>
 
-                                  {/* Faded white Garment Manual specification panel section */}
                                   <div className="mt-4 space-y-3 border-t border-slate-800/80 pt-4">
                                     <h4 className="text-[11px] uppercase font-bold tracking-wider text-amber-400">Garment Blueprint Manual</h4>
                                     <div className="text-slate-400 text-xs leading-relaxed space-y-2">
