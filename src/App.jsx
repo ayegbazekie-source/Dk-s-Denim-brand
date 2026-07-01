@@ -14,7 +14,18 @@ import Admin from './pages/Admin';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
-
+// Add this near the top of App.jsx or main.jsx
+(function captureAffiliateLink() {
+  if (typeof window !== "undefined") {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get("ref");
+    if (ref) {
+      localStorage.setItem("dkadris_affiliate_ref", ref.trim().toUpperCase());
+      console.log("🎯 Affiliate tracking code permanently locked:", ref.trim().toUpperCase());
+    }
+  }
+})();
+  
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
