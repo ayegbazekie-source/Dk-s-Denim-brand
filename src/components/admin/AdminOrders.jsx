@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Eye, ShoppingBag, Send, Check, BadgeCheck, Clock, AlertCircle } from "lucide-react";
+import { Search, Eye, ShoppingBag, Check } from "lucide-react";
 
 const STATUS_OPTIONS = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
 const statusColor = { pending: "text-orange-400 bg-orange-400/10", confirmed: "text-accent bg-accent/10", processing: "text-primary bg-primary/10", shipped: "text-blue-400 bg-blue-400/10", delivered: "text-green-400 bg-green-400/10", cancelled: "text-destructive bg-destructive/10" };
@@ -16,9 +16,6 @@ export default function AdminOrders() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selected, setSelected] = useState(null);
   const [updating, setUpdating] = useState(false);
-  const [emailMsg, setEmailMsg] = useState("");
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
 
   const load = async () => {
     try {
@@ -43,7 +40,7 @@ export default function AdminOrders() {
   const updateStatus = async (id, targetStatus, orderContext) => {
     setUpdating(true);
     try {
-      // 1. Update order status step
+      // 1. Update order status step (This automatically triggers your Brevo email from the database!)
       const { error } = await supabase
         .from("orders")
         .update({ status: targetStatus })
@@ -65,22 +62,6 @@ export default function AdminOrders() {
         }]);
       }
 
-      // 3. Automate Notification Emails for 'processing' and 'delivered'
-      if (orderContext?.customer_email) {
-        let textBody = "";
-        let subjectLine = "";
-
-        if (targetStatus === "processing") {
-          subjectLine = "Your D-Kadris Order is Booked! 📝";
-          textBody = `Hello ${orderContext.customer_name},\n\nYour custom order has been verified and is now under production setup. Estimated timeframe for tailoring completion and delivery dispatch is 3 to 7 business days.\n\nThank you for choosing D-Kadris.`;
-          await sendAutomatedNotification(orderContext.customer_email, orderContext.customer_name, subjectLine, textBody);
-        } else if (targetStatus === "delivered") {
-          subjectLine = "Your D-Kadris Order is Ready for Collection! 📦";
-          textBody = `Hello ${orderContext.customer_name},\n\nExcellent news! Your custom apparel is complete and ready for pickup. Please contact administration directly at +2348163914835 to coordinate logistics.\n\nBest regards,\nD-Kadris Atelier Team.`;
-          await sendAutomatedNotification(orderContext.customer_email, orderContext.customer_name, subjectLine, textBody);
-        }
-      }
-
       if (selected?.id === id) {
         setSelected(o => ({ ...o, status: targetStatus }));
       }
@@ -90,54 +71,6 @@ export default function AdminOrders() {
       alert(`Pipeline error: ${err.message}`);
     } finally {
       setUpdating(false);
-    }
-  };
-
-  const sendAutomatedNotification = async (email, name, subject, bodyText) => {
-    try {
-      await fetch("https://your-worker-name.your-subdomain.workers.dev", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: email,
-          toName: name,
-          subject: subject,
-          body: bodyText
-        }),
-      });
-    } catch (err) {
-      console.error("Silent notification fail:", err);
-    }
-  };
-
-  const sendReadyEmail = async (order) => {
-    setSendingEmail(true);
-    try {
-      const emailResponse = await fetch("https://your-worker-name.your-subdomain.workers.dev", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: order.customer_email,
-          toName: order.customer_name,
-          subject: `D-Kadris Production Update ⚡`,
-          body: emailMsg 
-        }),
-      });
-
-      if (emailResponse.ok) {
-        setEmailSent(true);
-        setTimeout(() => {
-          setEmailSent(false);
-          setEmailMsg("");
-        }, 4000);
-      } else {
-        throw new Error("Email worker request rejected.");
-      }
-    } catch (err) {
-      console.error("Error sending communication:", err);
-      alert("Could not deliver notification email.");
-    } finally {
-      setSendingEmail(false);
     }
   };
 
@@ -188,9 +121,7 @@ export default function AdminOrders() {
                   <p className="font-bold">{o.customer_name || "Guest User"}</p>
                   <p className="text-muted-foreground text-xs">{o.customer_email}</p>
                 </td>
-                {/* Fixed cross-component metric map mismatch field to prevent displaying ₦0 */}
                 <td className="p-4 text-accent font-bold">
-                  {/* Pulls from total_amount directly matching Catalog inserts */}
                   ₦{(o.total_amount || o.total || 0).toLocaleString()}
                 </td>
                 <td className="p-4 text-muted-foreground">
@@ -200,7 +131,7 @@ export default function AdminOrders() {
                   <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${statusColor[o.status] || "text-muted-foreground bg-muted"}`}>{o.status || "pending"}</span>
                 </td>
                 <td className="p-4">
-                  <button onClick={() => { setSelected(o); setEmailSent(false); }} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground"><Eye className="h-4 w-4" /></button>
+                  <button onClick={() => setSelected(o)} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground"><Eye className="h-4 w-4" /></button>
                 </td>
               </tr>
             ))}
@@ -254,31 +185,12 @@ export default function AdminOrders() {
                     </button>
                   ))}
                 </div>
+                <p className="text-muted-foreground text-[11px] mt-2">💡 Selecting 'processing' or 'delivered' automatically drafts and transmits the client confirmation emails via Brevo setup.</p>
               </div>
-
-              {selected.status === "processing" && (
-                <div className="border-t border-border pt-4">
-                  <p className="text-muted-foreground text-xs uppercase tracking-wide mb-2">Custom Shop Communication Update</p>
-                  {emailSent ? (
-                    <div className="bg-accent/10 border border-accent/30 rounded-xl p-3 text-accent font-bold text-sm flex items-center gap-2">
-                      <Check className="h-4 w-4" /> Email sent to {selected.customer_email}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <textarea value={emailMsg} onChange={e => setEmailMsg(e.target.value)} placeholder={`Type bespoke status update message to send...`}
-                        className="w-full bg-muted border border-border rounded-xl p-3 text-card-foreground text-sm placeholder:text-muted-foreground min-h-[80px] focus:outline-none focus:ring-2 focus:ring-accent/40 resize-none" />
-                      <Button onClick={() => sendReadyEmail(selected)} disabled={sendingEmail || !emailMsg.trim()} className="bg-accent text-accent-foreground font-bold rounded-full px-6 py-2.5 hover:scale-105 transition-all flex items-center gap-2 text-sm">
-                        <Send className="h-4 w-4" /> {sendingEmail ? "Sending..." : "Send Shop Update Email"}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
         </DialogContent>
       </Dialog>
     </div>
   );
-                }
-                    
+              }
