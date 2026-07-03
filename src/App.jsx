@@ -3,7 +3,6 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
-import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Home from './pages/Home';
@@ -12,11 +11,13 @@ import Affiliate from './pages/Affiliate';
 import Layout from './components/Layout';
 import Admin from './pages/Admin';
 
+// FIX: Pointing directly to the correct pages folder location
+import PageNotFound from './pages/PageNotFound';
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, settings } = useAuth();
   const location = useLocation();
 
-  // Safely capture affiliate codes inside React's lifecycle
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
@@ -45,7 +46,7 @@ const AuthenticatedApp = () => {
     }
   }
 
-  // Parse both formats safely
+  // Strict Maintenance Flag Evaluation
   let isMaintenanceMode = false;
   if (Array.isArray(settings)) {
     const maintenanceRow = settings.find(item => item.key === 'maintenance_mode' || item.key === 'maintenance');
