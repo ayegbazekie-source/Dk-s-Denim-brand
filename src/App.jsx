@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -12,11 +13,11 @@ import Layout from './components/Layout';
 import Admin from './pages/Admin';
 
 const AuthenticatedApp = () => {
-  // 1. Pull settings out of your existing AuthContext state tracker
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, settings, user } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, settings } = useAuth();
   const location = useLocation();
 
-  (function captureAffiliateLink() {
+  // Safely capture affiliate codes inside React's lifecycle
+  useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       const ref = urlParams.get("ref");
@@ -25,7 +26,7 @@ const AuthenticatedApp = () => {
         console.log("🎯 Affiliate tracking code permanently locked:", ref.trim().toUpperCase());
       }
     }
-  })();
+  }, []);
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -44,17 +45,22 @@ const AuthenticatedApp = () => {
     }
   }
 
-  // 2. CHECK FOR MAINTENANCE MODE INTERCEPTION
-  // We check if maintenance mode equals 'maintenance' and make sure you aren't trying to view the /Admin path or logged in as an administrator
-  const isMaintenanceMode = settings?.maintenance_mode === 'maintenance' || settings?.maintenance === 'maintenance';
+  // Parse both formats safely
+  let isMaintenanceMode = false;
+  if (Array.isArray(settings)) {
+    const maintenanceRow = settings.find(item => item.key === 'maintenance_mode' || item.key === 'maintenance');
+    isMaintenanceMode = maintenanceRow?.value === 'maintenance';
+  } else if (settings && typeof settings === 'object') {
+    isMaintenanceMode = settings.maintenance_mode === 'maintenance' || settings.maintenance === 'maintenance';
+  }
+
   const isAdminPath = location.pathname.toLowerCase().startsWith('/admin');
 
   if (isMaintenanceMode && !isAdminPath) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#111111] text-white p-6 z-[9999]">
         <div className="max-w-md w-full text-center space-y-6">
-          {/* Brand Premium Asset Profile */}
-          <div className="mx-auto w-20 h-20 bg-[#1c1c1e] border border-[#D4AF37]/20 rounded-2xl flex items-center justify-center shadow-xl animate-pulse">
+          <div className="mx-auto w-20 h-20 bg-[#1c1c1e] border border-[#D4AF37]/20 rounded-2xl flex items-center justify-center shadow-xl">
             <span className="text-[#D4AF37] font-black text-2xl tracking-tighter">DKs</span>
           </div>
           
@@ -100,7 +106,7 @@ function App() {
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>
-  )
+  );
 }
 
 export default App;
