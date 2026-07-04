@@ -210,7 +210,13 @@ function WhyDKadrisSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <AnimatedElement>
             <div className="relative rounded-[2rem] overflow-hidden aspect-[4/5] shadow-2xl">
-              <img src="https://YOUR_PROJECT.supabase.co/storage/v1/object/public/products/craftsmanship.jpg" alt="Craftsmanship" className="w-full h-full object-cover scale-105" style={{ animation: 'slowZoom 20s ease-in-out infinite alternate' }} />
+              {/* Replace YOUR_PROJECT_ID with your actual Supabase project reference ID */}
+<img 
+  src="https://dkadristailoringser.supabase.co/storage/v1/object/public/brand_asset/craftsmanship.jpg" 
+  alt="Craftsmanship" 
+  className="w-full h-full object-cover scale-105" 
+  style={{ animation: 'slowZoom 20s ease-in-out infinite alternate' }} 
+/>
               <div className="absolute inset-0 bg-gradient-to-tr from-background/80 via-transparent to-transparent" />
               <div className="absolute bottom-8 left-8">
                 <div className="backdrop-blur-md bg-background/30 border border-white/10 text-foreground rounded-2xl p-6 shadow-2xl">
