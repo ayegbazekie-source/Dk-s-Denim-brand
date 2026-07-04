@@ -288,24 +288,31 @@ function NewsletterSection() {
   const [loading, setLoading] = useState(false);
 
   const handleSubscribe = async (e) => {
-    e.preventDefault();
-    if (!email) return;
-    setLoading(true);
+  e.preventDefault();
+  if (!email) return;
+  setLoading(true);
 
-    try {
-      const { error } = await supabase
-        .from("newsletter")
-        .insert([{ email, subscribed_date: new Date().toISOString(), is_active: true }]);
+  try {
+    const { error } = await supabase
+      .from("newsletter_subscribers") //  Updated to match your actual database table
+      .insert([
+        {
+          email,
+          subscribed_date: new Date().toISOString(),
+          is_active: true
+        }
+      ]);
 
-      if (error) throw error;
-      setSubmitted(true);
-    } catch (err) {
-      console.error("Subscription error:", err);
-      alert("Unable to subscribe at the moment. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    if (error) throw error;
+    setSubmitted(true);
+  } catch (err) {
+    console.error("Subscription error:", err);
+    // Temporary debug alert so you can see if any column constraints fail
+    alert(`Subscription error: ${err.message || err}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <section className="bg-background py-24 px-6 border-t border-border/30">
