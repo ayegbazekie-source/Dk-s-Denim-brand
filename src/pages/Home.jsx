@@ -16,7 +16,6 @@ const AnimatedElement = ({ children, className, delay = 0 }) => {
     const el = ref.current;
     if (!el) return;
     
-    // Check if already in view on mount to prevent layout pop
     const rect = el.getBoundingClientRect();
     if (rect.top < window.innerHeight) { 
       setIsVisible(true); 
@@ -50,21 +49,16 @@ function HeroSection() {
 
   return (
     <section className="relative min-h-[100svh] flex flex-col items-center justify-center bg-background pt-20 pb-32">
-      {/* Background with noise texture and gradients for a premium dark look */}
       <div className="absolute inset-0 bg-background z-0" />
       <motion.div style={{ y: y1 }} className="absolute inset-0 opacity-[0.03] z-0 mix-blend-overlay pointer-events-none" 
         backgroundImage='url("data:image/svg+xml,%3Csvg viewBox=%270 0 256 256%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.8%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23n)%27/%3E%3C/svg%3E")' 
       />
       
-      {/* Deep cinematic glow behind text */}
       <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
         <div className="w-[60vw] h-[60vw] bg-accent/5 rounded-full blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
       </div>
 
-      <motion.div 
-        style={{ opacity }}
-        className="relative z-10 flex flex-col items-center text-center px-6 max-w-4xl mx-auto w-full"
-      >
+      <motion.div style={{ opacity }} className="relative z-10 flex flex-col items-center text-center px-6 max-w-4xl mx-auto w-full">
         <motion.h1 
           initial={{ opacity: 0, y: 30, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -102,19 +96,13 @@ function HeroSection() {
           </Link>
         </motion.div>
 
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.9, duration: 1 }}
-          className="mt-16"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9, duration: 1 }} className="mt-16">
           <p className="text-accent text-lg sm:text-xl italic font-serif opacity-90 tracking-wide">
             Your style, your perfect fit.
           </p>
         </motion.div>
       </motion.div>
 
-      {/* Scroll Down Arrow */}
       <motion.a
         href="#catalog"
         initial={{ opacity: 0, y: 10 }}
@@ -156,7 +144,6 @@ function FeaturedCollectionsSection() {
           .limit(20);
 
         if (error) throw error;
-
         setProducts(data || []);
       } catch (err) {
         console.error("Error loading products:", err);
@@ -164,7 +151,6 @@ function FeaturedCollectionsSection() {
         setLoading(false);
       }
     }
-
     fetchProducts();
   }, []);
 
@@ -180,7 +166,6 @@ function FeaturedCollectionsSection() {
   return (
     <section id="catalog" className="bg-muted py-32 px-6 border-y border-border/30 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
-      
       <div className="max-w-7xl mx-auto relative z-10">
         <AnimatedElement className="text-center mb-20">
           <span className="text-accent text-sm font-bold tracking-[0.2em] uppercase mb-4 block">The Collection</span>
@@ -304,13 +289,7 @@ function NewsletterSection() {
     try {
       const { error } = await supabase
         .from("newsletter")
-        .insert([
-          {
-            email,
-            subscribed_date: new Date().toISOString(),
-            is_active: true
-          }
-        ]);
+        .insert([{ email, subscribed_date: new Date().toISOString(), is_active: true }]);
 
       if (error) throw error;
       setSubmitted(true);
@@ -356,7 +335,68 @@ function NewsletterSection() {
   );
 }
 
+/* Updated root entry to trap layout actions and prevent route navigation *[span_0](start_span)[span_0](end_span)*/
 export default function Home() {
+  const [isMaintenance, setIsMaintenance] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function checkMaintenanceStatus() {
+      try {
+        const { data, error } = await supabase
+          .from("settings")
+          .select("value")
+          .eq("key", "maintenance_mode")
+          .single();
+
+        if (!error && data) {
+          setIsMaintenance(data.value === "true");
+        }
+      } catch (err) {
+        console.error("Error reading application layout flags:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    checkMaintenanceStatus();
+  }, []);
+
+  // 1. Structural loading fallback screen
+  if (loading) {
+    return (
+      <div className="bg-background min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // 2. Global Lockdown Template: Rendered cleanly with no external headers, footers, or router access points.
+  if (isMaintenance) {
+    return (
+      <div className="bg-background min-h-[100svh] w-full fixed inset-0 z-[99999] flex flex-col items-center justify-center text-center px-6 overflow-hidden selection:bg-accent/30">
+        <div className="absolute inset-0 bg-background z-0" />
+        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+          <div className="w-[60vw] h-[60vw] bg-accent/5 rounded-full blur-[130px]" />
+        </div>
+        
+        <div className="relative z-10 max-w-lg mx-auto flex flex-col items-center">
+          <h1 className="text-4xl sm:text-6xl font-black text-accent mb-6 font-serif tracking-tight leading-tight">
+            Under Maintenance
+          </h1>
+          <p className="text-foreground/80 text-base sm:text-xl font-light mb-10 max-w-md leading-relaxed">
+            We are working behind the scenes to enhance your custom denim experience. The platform will return online shortly.
+          </p>
+          <div className="w-24 h-[1px] bg-border/40 mb-6" />
+          <div className="text-xs text-muted-foreground uppercase tracking-[0.2em] font-medium">
+            Admin Lockdown Active
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Normal layout renders when maintenance status is falsy
   return (
     <div className="bg-background min-h-screen selection:bg-accent/30 selection:text-accent">
       <HeroSection />
