@@ -17,7 +17,7 @@ export default function AdminNewsletter() {
       const { data, error } = await supabase
         .from("newsletter_subscribers") // Matches your Postgres table name
         .select("*")
-        .order("created_at", { ascending: false }); // Native desc sort configuration
+        .order("subscribed_date", { ascending: false }); // Updated from created_at to match your date column layout
 
       if (error) throw error;
       setSubs(data || []);
