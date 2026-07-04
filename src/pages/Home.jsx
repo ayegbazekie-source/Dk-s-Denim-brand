@@ -212,7 +212,7 @@ function WhyDKadrisSection() {
             <div className="relative rounded-[2rem] overflow-hidden aspect-[4/5] shadow-2xl">
               {/* Replace YOUR_PROJECT_ID with your actual Supabase project reference ID */}
 <img 
-  src="https://uwbvliklifubrfvpunag.supabase.co/storage/v1/object/public/brand_asset/craftsmanship.jpg" 
+  src="https://uwbvliklifubrfvpunag.supabase.co/storage/v1/object/public/brand-assets/craftsmanship.jpg" 
   alt="Craftsmanship" 
   className="w-full h-full object-cover scale-105" 
   style={{ animation: 'slowZoom 20s ease-in-out infinite alternate' }} 
