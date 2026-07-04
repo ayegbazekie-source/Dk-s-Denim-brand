@@ -17,7 +17,7 @@ export default function AdminNewsletter() {
       const { data, error } = await supabase
         .from("newsletter_subscribers") // Matches your Postgres table name
         .select("*")
-        .order("subscribed_date", { ascending: false }); // Updated from created_at to match your date column layout
+        .order("subscribed_date", { ascending: false }); // Sorted by your date column
 
       if (error) throw error;
       setSubs(data || []);
@@ -87,8 +87,8 @@ export default function AdminNewsletter() {
                   {s.subscribed_date ? new Date(s.subscribed_date).toLocaleDateString() : "—"}
                 </td>
                 <td className="p-4">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${s.is_active !== false ? "text-accent bg-accent/10" : "text-muted-foreground bg-muted"}`}>
-                    {s.is_active !== false ? "Active" : "Inactive"}
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold text-accent bg-accent/10">
+                    Active
                   </span>
                 </td>
                 <td className="p-4">
