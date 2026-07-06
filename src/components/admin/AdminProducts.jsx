@@ -14,8 +14,8 @@ const badgeColor = {
 // Multi-tier structural mapping config
 const CATEGORY_MAP = {
   DENIM: ["Jackets", "Jeans", "Cargo", "Shorts", "Jumpsuits"],
-  NATIVE: ["Senators", "Agbada", "Kaftans", "Caps"],
-  CORPORATE: ["Suits", "Blazers", "Trousers", "Shirts"]
+  NATIVE: ["Senators", "Kaftans", "Caps"],
+  CORPORATE: ["Trousers", "Shirts"]
 };
 
 const initialFormState = {
@@ -228,69 +228,71 @@ export default function AdminProducts() {
         </Button>
       </div>
 
-      {/* Main Table Interface */}
+      {/* Main Table Interface with touch responsive sliding support */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-muted-foreground text-xs uppercase tracking-wide border-b border-border bg-muted/30">
-              <th className="text-left p-4">Product</th>
-              <th className="text-left p-4">Main Category</th>
-              <th className="text-left p-4">Subcategory</th>
-              <th className="text-left p-4">Price</th>
-              <th className="text-left p-4">Stock</th>
-              <th className="text-left p-4">Badges</th>
-              <th className="text-right p-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {filtered.map(p => (
-              <tr key={p.id} className="text-card-foreground hover:bg-muted/20 transition-colors">
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden border border-border">
-                      {p.image_url ? (
-                        <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Package className="h-5 w-5 text-muted-foreground/50" />
-                      )}
-                    </div>
-                    <div className="max-w-[180px] sm:max-w-xs">
-                      <p className="font-bold truncate">{p.name}</p>
-                      <p className="text-muted-foreground text-xs truncate">{p.description}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="p-4 uppercase font-bold text-xs tracking-wider text-muted-foreground">{p.category || "Unassigned"}</td>
-                <td className="p-4 capitalize font-medium text-foreground">{p.subcategory || "—"}</td>
-                <td className="p-4 font-bold text-primary">₦{(Number(p.price) || 0).toLocaleString()}</td>
-                <td className="p-4 font-medium">{p.stock ?? 0} pcs</td>
-                <td className="p-4">
-                  <div className="flex flex-wrap gap-1.5">
-                    {p.is_featured && <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${badgeColor.featured}`}>Featured</span>}
-                    {p.is_new_arrival && <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${badgeColor.new}`}>New</span>}
-                    {!p.is_featured && !p.is_new_arrival && <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${badgeColor.standard}`}>Standard</span>}
-                  </div>
-                </td>
-                <td className="p-4 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <button onClick={() => setSelected(p)} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => handleEditClick(p)} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground">
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => handleDeleteProduct(p.id)} className="p-2 rounded-lg hover:bg-destructive/10 transition-colors text-destructive/70 hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
+        <div className="w-full overflow-x-auto [webkit-overflow-scrolling:touch]">
+          <table className="w-full text-sm min-w-[800px] table-auto">
+            <thead>
+              <tr className="text-muted-foreground text-xs uppercase tracking-wide border-b border-border bg-muted/30">
+                <th className="text-left p-4">Product</th>
+                <th className="text-left p-4">Main Category</th>
+                <th className="text-left p-4">Subcategory</th>
+                <th className="text-left p-4">Price</th>
+                <th className="text-left p-4">Stock</th>
+                <th className="text-left p-4">Badges</th>
+                <th className="text-right p-4 pr-6">Actions</th>
               </tr>
-            ))}
-            {filtered.length === 0 && !loading && (
-              <tr><td colSpan={7} className="py-12 text-center text-muted-foreground"><Package className="h-10 w-10 mx-auto mb-2 opacity-30" />No products found</td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map(p => (
+                <tr key={p.id} className="text-card-foreground hover:bg-muted/20 transition-colors">
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden border border-border">
+                        {p.image_url ? (
+                          <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Package className="h-5 w-5 text-muted-foreground/50" />
+                        )}
+                      </div>
+                      <div className="max-w-[180px]">
+                        <p className="font-bold truncate">{p.name}</p>
+                        <p className="text-muted-foreground text-xs truncate">{p.description}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4 uppercase font-bold text-xs tracking-wider text-muted-foreground">{p.category || "Unassigned"}</td>
+                  <td className="p-4 capitalize font-medium text-foreground">{p.subcategory || "—"}</td>
+                  <td className="p-4 font-bold text-primary">₦{(Number(p.price) || 0).toLocaleString()}</td>
+                  <td className="p-4 font-medium">{p.stock ?? 0} pcs</td>
+                  <td className="p-4">
+                    <div className="flex flex-wrap gap-1.5">
+                      {p.is_featured && <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${badgeColor.featured}`}>Featured</span>}
+                      {p.is_new_arrival && <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${badgeColor.new}`}>New</span>}
+                      {!p.is_featured && !p.is_new_arrival && <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${badgeColor.standard}`}>Standard</span>}
+                    </div>
+                  </td>
+                  <td className="p-4 text-right pr-6">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => setSelected(p)} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground">
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => handleEditClick(p)} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground">
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => handleDeleteProduct(p.id)} className="p-2 rounded-lg hover:bg-destructive/10 transition-colors text-destructive/70 hover:text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && !loading && (
+                <tr><td colSpan={7} className="py-12 text-center text-muted-foreground"><Package className="h-10 w-10 mx-auto mb-2 opacity-30" />No products found</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* RENDER FORM DOCK POPUP */}
