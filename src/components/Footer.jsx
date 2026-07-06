@@ -143,8 +143,25 @@ export default function Footer() {
               <li><Link to="/" className="text-muted-foreground hover:text-accent transition-colors text-sm">Home</Link></li>
               <li><Link to="/Catalog" className="text-muted-foreground hover:text-accent transition-colors text-sm">Shop Collection</Link></li>
               <li><Link to="/Affiliate" className="text-muted-foreground hover:text-accent transition-colors text-sm">Affiliate Program</Link></li>
-              <li><a href="#" className="text-muted-foreground hover:text-accent transition-colors text-sm">Custom Tailoring</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-accent transition-colors text-sm">Size Guide</a></li>
+              
+              {/* Redirects to Catalog grid page */}
+              <li>
+                <Link to="/Catalog" className="text-muted-foreground hover:text-accent transition-colors text-sm">
+                  Custom Tailoring
+                </Link>
+              </li>
+              
+              {/* Opens your video channel/link safely in a new tab */}
+              <li>
+                <a 
+                  href={socialLinks.instagram_url ? "https://youtube.com" : "https://youtube.com"} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-accent font-bold hover:underline transition-all text-sm"
+                >
+                  Size Guide
+                </a>
+              </li>
             </ul>
           </div>
 
