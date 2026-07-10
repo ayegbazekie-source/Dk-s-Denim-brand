@@ -11,10 +11,10 @@ const badgeColor = {
   standard: "text-muted-foreground bg-muted border border-border",
 };
 
-// Multi-tier structural mapping config
+// Multi-tier structural mapping config synced with Catalog updates
 const CATEGORY_MAP = {
   DENIM: ["Jackets", "Jeans", "Cargo", "Shorts", "Jumpsuits"],
-  NATIVE: ["Senators", "Kaftans", "Caps"],
+  NATIVE: ["Senators", "Kaftans", "Jalabia", "Caps"], // Added 'Jalabia'
   CORPORATE: ["Trousers", "Shirts"]
 };
 
@@ -22,8 +22,8 @@ const initialFormState = {
   name: "",
   price: "",
   stock: "",
-  category: "", // Reset to empty default to force valid parent selection
-  subcategory: "", // Added multi-tier tracking row state
+  category: "", 
+  subcategory: "", 
   fit_type: "",
   fabric: "",
   stretch_level: "",
@@ -123,7 +123,7 @@ export default function AdminProducts() {
       price: parseFloat(formData.price) || 0,
       stock: parseInt(formData.stock) || 0,
       category: formData.category,
-      subcategory: formData.subcategory || null, // Structural parsing insertion payload
+      subcategory: formData.subcategory || null, 
       fit_type: formData.fit_type || null,
       fabric: formData.fabric || null,
       stretch_level: formData.stretch_level || null,
@@ -360,7 +360,7 @@ export default function AdminProducts() {
               </div>
               <div>
                 <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Fabric</label>
-                <Input value={formData.fabric} onChange={e => setFormData({...formData, fabric: e.target.value})} placeholder="Raw Denim, 100% Cotton Stretch" className="bg-muted border-border" />
+                <Input value={formData.fabric} onChange={e => setFormData({...formData, fabric: e.target.value})} placeholder="Raw Denim, Suiting Fabric" className="bg-muted border-border" />
               </div>
             </div>
 
@@ -401,7 +401,7 @@ export default function AdminProducts() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Sizes (Comma-Separated)</label>
-                <Input value={formData.sizes} onChange={e => setFormData({...formData, sizes: e.target.value})} placeholder="S, M, L, XL" className="bg-muted border-border" />
+                <Input value={formData.sizes} onChange={e => setFormData({...formData, sizes: e.target.value})} placeholder="30, 32, 34, M, L, XL" className="bg-muted border-border" />
               </div>
               <div>
                 <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Colors (Comma-Separated)</label>
@@ -410,7 +410,7 @@ export default function AdminProducts() {
             </div>
 
             <div>
-              <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Tags (Comma-Separated)</label>
+            <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Tags (Comma-Separated)</label>
               <Input value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} placeholder="featured, new-arrival" className="bg-muted border-border" />
             </div>
 
