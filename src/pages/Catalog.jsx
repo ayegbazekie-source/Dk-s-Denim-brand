@@ -16,9 +16,9 @@ import { supabase } from "@/lib/supabase";
 
 // Updated category structure: Added 'Jalabia' and removed global 'ALL' map array reference 
 const CATEGORY_MAP = {
-  DENIM: ["ALL", "Jackets", "Jeans", "Cargo", "Shorts", "Jumpsuits"],
+  DENIM: ["ALL", "Jackets", "Jeans", "Cargo", "Shorts"],
   NATIVE: ["ALL", "Senators", "Kaftans", "Jalabia", "Caps"],
-  CORPORATE: ["ALL", "Trousers", "Shirts"]
+  CORPORATE: ["ALL", "Trousers", "Shirts", "Two-piece"]
 };
 
 const AnimatedElement = ({ children, className, delay = 0 }) => {
