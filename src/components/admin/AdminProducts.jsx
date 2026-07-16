@@ -15,7 +15,7 @@ const badgeColor = {
 const CATEGORY_MAP = {
   DENIM: ["Jackets", "Jeans", "Cargo", "Shorts", "Jumpsuits"],
   NATIVE: ["Senators", "Kaftans", "Jalabia", "Caps"], // Added 'Jalabia'
-  CORPORATE: ["Trousers", "Shirts"]
+  CORPORATE: ["Trousers", "Shirts", "Two-piece"]
 };
 
 const initialFormState = {
