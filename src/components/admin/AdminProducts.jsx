@@ -13,7 +13,7 @@ const badgeColor = {
 
 // Multi-tier structural mapping config synced with Catalog updates
 const CATEGORY_MAP = {
-  DENIM: ["Jackets", "Jeans", "Cargo", "Shorts", "Jumpsuits"],
+  DENIM: ["Jackets", "Jeans", "Cargo", "Shorts"],
   NATIVE: ["Senators", "Kaftans", "Jalabia", "Caps"], // Added 'Jalabia'
   CORPORATE: ["Trousers", "Shirts", "Two-piece"]
 };
