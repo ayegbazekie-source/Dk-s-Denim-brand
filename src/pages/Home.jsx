@@ -42,7 +42,6 @@ const AnimatedElement = ({ children, className, delay = 0 }) => {
   );
 };
 
-// Fallback images used while database loads or as a clean backup
 const DEFAULT_HERO_IMAGES = {
   mobile: "https://images.unsplash.com/photo-1542272604-787c3835535d?q=80&w=1000&auto=format&fit=crop",
   desktop: "https://images.unsplash.com/photo-1516257984-b1b4d707412e?q=80&w=2000&auto=format&fit=crop"
@@ -54,7 +53,6 @@ function HeroSection({ featuredProducts, loadingProducts }) {
   const opacity = useTransform(scrollY, [0, 500], [1, 0]);
   const [selectedHeroImage, setSelectedHeroImage] = useState(DEFAULT_HERO_IMAGES.desktop);
 
-  // Randomly pick a featured product image whenever products are loaded
   useEffect(() => {
     if (!loadingProducts && featuredProducts && featuredProducts.length > 0) {
       const randomIndex = Math.floor(Math.random() * featuredProducts.length);
@@ -67,8 +65,6 @@ function HeroSection({ featuredProducts, loadingProducts }) {
 
   return (
     <section className="relative min-h-[100svh] flex flex-col items-center justify-between pt-28 pb-16 overflow-hidden">
-      
-      {/* BACKGROUND IMAGE UNDERLAY WITH MOTION PARALLAX EFFECT */}
       <motion.div style={{ y: y1 }} className="absolute inset-0 z-0">
         <picture>
           <source 
@@ -81,19 +77,15 @@ function HeroSection({ featuredProducts, loadingProducts }) {
             className="w-full h-full object-cover object-center select-none transition-all duration-1000"
           />
         </picture>
-        
-        {/* Dark vignette gradient to keep text readable on any background image */}
         <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/80 to-background" />
       </motion.div>
 
-      {/* Decorative subtle texture noise grid */}
       <div className="absolute inset-0 opacity-[0.02] z-0 mix-blend-overlay pointer-events-none" 
         style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%270 0 256 256%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.8%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23n)%27/%3E%3C/svg%3E")' }}
       />
 
       <div className="h-4 w-full" />
 
-      {/* MAIN CONTENT BLOCK */}
       <motion.div style={{ opacity }} className="relative z-10 flex flex-col items-center text-center px-6 max-w-4xl mx-auto w-full my-auto">
         <motion.h1 
           initial={{ opacity: 0, y: 30, scale: 0.95 }}
@@ -139,7 +131,6 @@ function HeroSection({ featuredProducts, loadingProducts }) {
         </motion.div>
       </motion.div>
 
-      {/* SCROLL ANCHOR */}
       <motion.a
         href="#catalog"
         initial={{ opacity: 0, y: 10 }}
@@ -180,30 +171,30 @@ function FeaturedCollectionsSection({ featuredProducts, loading }) {
   const featured = featuredProducts.length > 0 ? featuredProducts : staticFallback.slice(0, 6);
 
   return (
-    <section id="catalog" className="bg-muted py-32 px-6 border-y border-border/30 relative overflow-hidden">
+    <section id="catalog" className="bg-muted py-24 px-4 sm:px-6 border-y border-border/30 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
       <div className="max-w-7xl mx-auto relative z-10">
         
-        <AnimatedElement className="text-center mb-20">
-          <span className="text-accent text-sm font-bold tracking-[0.2em] uppercase mb-4 block">The Collection</span>
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-black text-foreground mb-6 font-serif tracking-tight">Masterpieces in Denim</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">Each piece is tailored with precision — handcrafted by master tailors in Nigeria, designed for the modern world.</p>
+        <AnimatedElement className="text-center mb-16">
+          <span className="text-accent text-xs sm:text-sm font-bold tracking-[0.2em] uppercase mb-3 block">The Collection</span>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-black text-foreground mb-4 font-serif tracking-tight">Masterpieces in Denim</h2>
+          <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-base">Each piece is tailored with precision — handcrafted by master tailors in Nigeria, designed for the modern world.</p>
         </AnimatedElement>
 
         {/* 
-          OPTIMIZATION: 
-          - Mobile Carousel layout uses "min-w-[68vw]" (instead of 82vw) to shrink card size so the swipe navigation is instantly obvious.
-          - Padding "px-6" on the track gives clean spacing.
+          LAYOUT UPDATE: 
+          - Completely removed the horizontal carousel behavior (`overflow-x-auto` & `flex-row`).
+          - Implemented a responsive grid that stays 2-columns on mobile (`grid-cols-2`) and transitions into a beautiful, asymmetrical layout on desktop screens (`md:grid-cols-12`).
         */}
         <div 
           className={`
-            flex overflow-x-auto snap-x snap-mandatory gap-5 pb-8 scrollbar-none px-4 -mx-4
-            md:grid md:grid-cols-12 md:gap-8 md:overflow-x-visible md:pb-0 md:px-0 md:mx-0
+            grid grid-cols-2 gap-3 sm:gap-6
+            md:grid-cols-12 md:gap-8
             ${loading ? "opacity-50" : "opacity-100"} transition-opacity duration-700
           `}
         >
           {featured.map((product, index) => {
-            // Editorial custom size parameters to break uniform box looks on desktop
+            // Editorial custom size spans to create clean layout variety on desktop
             const gridSpans = [
               "md:col-span-7", 
               "md:col-span-5", 
@@ -216,31 +207,34 @@ function FeaturedCollectionsSection({ featuredProducts, loading }) {
             return (
               <div 
                 key={product.id || index} 
-                className={`
-                  min-w-[68vw] sm:min-w-[40vw] snap-center shrink-0 
-                  md:min-w-0 md:shrink ${gridSpans[index] || "md:col-span-4"}
-                `}
+                className={`${gridSpans[index] || "md:col-span-4"}`}
               >
-                <AnimatedElement delay={index * 100}>
+                <AnimatedElement delay={index * 50}>
                   <Link to="/Catalog">
                     {/* 
-                      OPTIMIZATION:
-                      - aspect-[2/3] on mobile prevents heavy image cropping and zoom, keeping full vertical garments in view.
-                      - md:aspect-auto allows desktop sizes to respond naturally.
+                      CARD OPTIMIZATION:
+                      - Changed mobile aspect ratio to `aspect-[3/4]` to prevent vertical stretching.
+                      - Uses `object-cover` safely because the grid cells are small enough to keep the whole item elegantly centered and clear.
                     */}
-                    <div className="group relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] bg-card cursor-pointer aspect-[2/3] md:aspect-[16/11] lg:aspect-square xl:aspect-[4/5] shadow-2xl shadow-black/20 hover:-translate-y-2 hover:shadow-accent/10 transition-all duration-700 border border-white/5">
+                    <div className="group relative overflow-hidden rounded-2xl md:rounded-[2rem] bg-card cursor-pointer aspect-[3/4] md:aspect-[16/11] lg:aspect-square xl:aspect-[4/5] shadow-lg md:shadow-2xl shadow-black/10 hover:-translate-y-1.5 transition-all duration-500 border border-white/5">
                       <img 
                         src={product.image_url} 
                         alt={product.name} 
-                        className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105" 
+                        className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105" 
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/20 to-transparent opacity-90 group-hover:opacity-95 transition-opacity duration-500" />
                       
-                      {/* Text adjustments for smaller mobile layout */}
-                      <div className="absolute bottom-0 left-0 p-5 md:p-8 w-full transform translate-y-1 group-hover:translate-y-0 transition-all duration-500">
-                        <p className="text-accent text-[10px] md:text-xs uppercase tracking-widest mb-1.5 font-bold">{product.category}</p>
-                        <h3 className="text-foreground font-black text-lg md:text-2xl mb-2 font-serif leading-tight">{product.name}</h3>
-                        <div className="flex items-center text-foreground/70 text-xs md:text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75">
+                      {/* Subtle elegant dark gradient overlay over image bottom to keep text legible */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/20 to-transparent opacity-85 group-hover:opacity-90 transition-opacity duration-300" />
+                      
+                      {/* Scaled down text layout to fit mobile dual columns cleanly */}
+                      <div className="absolute bottom-0 left-0 p-3 sm:p-5 md:p-8 w-full">
+                        <p className="text-accent text-[8px] sm:text-[10px] md:text-xs uppercase tracking-widest mb-1 font-bold">
+                          {product.category}
+                        </p>
+                        <h3 className="text-foreground font-black text-xs sm:text-base md:text-2xl mb-1 md:mb-2 font-serif leading-tight line-clamp-1 md:line-clamp-none">
+                          {product.name}
+                        </h3>
+                        <div className="hidden sm:flex items-center text-foreground/70 text-[10px] md:text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           Explore Piece <ArrowRight className="ml-1.5 h-3.5 w-3.5 text-accent" />
                         </div>
                       </div>
@@ -393,8 +387,9 @@ function NewsletterSection() {
                 onChange={e => setEmail(e.target.value)}
                 className="flex-1 bg-muted border-transparent focus-visible:ring-accent text-foreground placeholder:text-muted-foreground rounded-full px-8 h-14 text-base shadow-inner"
                 required
-              /> <Button type="submit" disabled={loading} className="bg-accent text-accent-foreground font-bold px-10 h-14 rounded-full hover:scale-105 transition-all duration-300 whitespace-nowrap shadow-lg shadow-accent/20">
-                {loading ? "Joining..." : "Subscribe"}
+              />
+              <Button type="submit" disabled={loading} className="bg-accent text-accent-foreground font-bold px-10 h-14 rounded-full hover:scale-105 transition-all duration-300 whitespace-nowrap shadow-lg shadow-accent/20">
+                {loading ?"Joining..." : "Subscribe"}
               </Button>
             </form>
           )}
@@ -410,7 +405,6 @@ export default function Home() {
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
-  // Consolidated database logic to fetch items once at the root
   useEffect(() => {
     async function checkMaintenanceStatus() {
       try {
@@ -495,7 +489,6 @@ export default function Home() {
       <CustomerReviews />
       <NewsletterSection />
       
-      {/* Floating WhatsApp CTA */}
       <a href="https://wa.me/2348163914835" target="_blank" rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-accent rounded-full flex items-center justify-center shadow-2xl shadow-accent/40 hover:scale-110 hover:-translate-y-2 transition-all duration-500 group">
         <MessageCircle className="h-8 w-8 text-accent-foreground" />
