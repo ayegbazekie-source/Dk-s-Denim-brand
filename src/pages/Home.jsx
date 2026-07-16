@@ -71,7 +71,6 @@ function HeroSection({ featuredProducts, loadingProducts }) {
       {/* BACKGROUND IMAGE UNDERLAY WITH MOTION PARALLAX EFFECT */}
       <motion.div style={{ y: y1 }} className="absolute inset-0 z-0">
         <picture>
-          {/* If using database imagery, we'll gracefully adapt the single selected image across all screen widths */}
           <source 
             media="(max-width: 640px)" 
             srcSet={selectedHeroImage === DEFAULT_HERO_IMAGES.desktop ? DEFAULT_HERO_IMAGES.mobile : selectedHeroImage} 
@@ -92,7 +91,7 @@ function HeroSection({ featuredProducts, loadingProducts }) {
         style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%270 0 256 256%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.8%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23n)%27/%3E%3C/svg%3E")' }}
       />
 
-      <div className="h-4 w-full" /> {/* Layout anchor spacing */}
+      <div className="h-4 w-full" />
 
       {/* MAIN CONTENT BLOCK */}
       <motion.div style={{ opacity }} className="relative z-10 flex flex-col items-center text-center px-6 max-w-4xl mx-auto w-full my-auto">
@@ -191,17 +190,20 @@ function FeaturedCollectionsSection({ featuredProducts, loading }) {
           <p className="text-muted-foreground max-w-2xl mx-auto text-lg">Each piece is tailored with precision — handcrafted by master tailors in Nigeria, designed for the modern world.</p>
         </AnimatedElement>
 
-        {/* MOBILE MODE: Swipe-to-slide premium horizontal touch track */}
-        {/* DESKTOP MODE: Asymmetrical Premium Editorial Catalog Grid */}
+        {/* 
+          OPTIMIZATION: 
+          - Mobile Carousel layout uses "min-w-[68vw]" (instead of 82vw) to shrink card size so the swipe navigation is instantly obvious.
+          - Padding "px-6" on the track gives clean spacing.
+        */}
         <div 
           className={`
-            flex overflow-x-auto snap-x snap-mandatory gap-6 pb-8 scrollbar-none
-            md:grid md:grid-cols-12 md:gap-8 md:overflow-x-visible md:pb-0
+            flex overflow-x-auto snap-x snap-mandatory gap-5 pb-8 scrollbar-none px-4 -mx-4
+            md:grid md:grid-cols-12 md:gap-8 md:overflow-x-visible md:pb-0 md:px-0 md:mx-0
             ${loading ? "opacity-50" : "opacity-100"} transition-opacity duration-700
           `}
         >
           {featured.map((product, index) => {
-            // Editorial custom size parameters to break uniform box looks
+            // Editorial custom size parameters to break uniform box looks on desktop
             const gridSpans = [
               "md:col-span-7", 
               "md:col-span-5", 
@@ -215,25 +217,31 @@ function FeaturedCollectionsSection({ featuredProducts, loading }) {
               <div 
                 key={product.id || index} 
                 className={`
-                  min-w-[82vw] sm:min-w-[50vw] snap-center shrink-0 
+                  min-w-[68vw] sm:min-w-[40vw] snap-center shrink-0 
                   md:min-w-0 md:shrink ${gridSpans[index] || "md:col-span-4"}
                 `}
               >
                 <AnimatedElement delay={index * 100}>
                   <Link to="/Catalog">
-                    <div className="group relative overflow-hidden rounded-[2rem] bg-card cursor-pointer aspect-[4/5] md:aspect-[16/11] lg:aspect-square xl:aspect-[4/5] shadow-2xl shadow-black/20 hover:-translate-y-2 hover:shadow-accent/10 transition-all duration-700 border border-white/5">
+                    {/* 
+                      OPTIMIZATION:
+                      - aspect-[2/3] on mobile prevents heavy image cropping and zoom, keeping full vertical garments in view.
+                      - md:aspect-auto allows desktop sizes to respond naturally.
+                    */}
+                    <div className="group relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] bg-card cursor-pointer aspect-[2/3] md:aspect-[16/11] lg:aspect-square xl:aspect-[4/5] shadow-2xl shadow-black/20 hover:-translate-y-2 hover:shadow-accent/10 transition-all duration-700 border border-white/5">
                       <img 
                         src={product.image_url} 
                         alt={product.name} 
                         className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105" 
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/25 to-transparent opacity-85 group-hover:opacity-90 transition-opacity duration-500" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/20 to-transparent opacity-90 group-hover:opacity-95 transition-opacity duration-500" />
                       
-                      <div className="absolute bottom-0 left-0 p-6 md:p-8 w-full transform translate-y-2 group-hover:translate-y-0 transition-all duration-500">
-                        <p className="text-accent text-xs uppercase tracking-widest mb-2 font-bold">{product.category}</p>
-                        <h3 className="text-foreground font-black text-xl md:text-2xl mb-3 font-serif leading-tight">{product.name}</h3>
-                        <div className="flex items-center text-foreground/70 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75">
-                          Explore Piece <ArrowRight className="ml-2 h-4 w-4 text-accent" />
+                      {/* Text adjustments for smaller mobile layout */}
+                      <div className="absolute bottom-0 left-0 p-5 md:p-8 w-full transform translate-y-1 group-hover:translate-y-0 transition-all duration-500">
+                        <p className="text-accent text-[10px] md:text-xs uppercase tracking-widest mb-1.5 font-bold">{product.category}</p>
+                        <h3 className="text-foreground font-black text-lg md:text-2xl mb-2 font-serif leading-tight">{product.name}</h3>
+                        <div className="flex items-center text-foreground/70 text-xs md:text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75">
+                          Explore Piece <ArrowRight className="ml-1.5 h-3.5 w-3.5 text-accent" />
                         </div>
                       </div>
                     </div>
@@ -385,8 +393,7 @@ function NewsletterSection() {
                 onChange={e => setEmail(e.target.value)}
                 className="flex-1 bg-muted border-transparent focus-visible:ring-accent text-foreground placeholder:text-muted-foreground rounded-full px-8 h-14 text-base shadow-inner"
                 required
-              />
-              <Button type="submit" disabled={loading} className="bg-accent text-accent-foreground font-bold px-10 h-14 rounded-full hover:scale-105 transition-all duration-300 whitespace-nowrap shadow-lg shadow-accent/20">
+              /> <Button type="submit" disabled={loading} className="bg-accent text-accent-foreground font-bold px-10 h-14 rounded-full hover:scale-105 transition-all duration-300 whitespace-nowrap shadow-lg shadow-accent/20">
                 {loading ? "Joining..." : "Subscribe"}
               </Button>
             </form>
@@ -480,7 +487,6 @@ export default function Home() {
 
   return (
     <div className="bg-background min-h-screen selection:bg-accent/30 selection:text-accent">
-      {/* Passing the fetched active list downward for localized selection */}
       <HeroSection featuredProducts={featuredProducts} loadingProducts={loadingProducts} />
       <FloatingDivider />
       <FeaturedCollectionsSection featuredProducts={featuredProducts} loading={loadingProducts} />
