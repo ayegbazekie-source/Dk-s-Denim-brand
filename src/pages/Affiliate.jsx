@@ -145,7 +145,6 @@ export default function Affiliate() {
 
     setSubmitting(true);
     try {
-      // 1. Self referral validation using Supabase Table
       if (cleanReferral) {
         const { data: matchingReferrer } = await supabase
           .from("affiliates")
@@ -160,7 +159,6 @@ export default function Affiliate() {
         }
       }
 
-      // 2. Sign up user via Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: form.password,
@@ -170,7 +168,6 @@ export default function Affiliate() {
 
       const code = generateCode(cleanName);
 
-      // 3. Create relational profile in 'affiliates' table linked via auth UID
       const { data: newAffiliate, error: profileError } = await supabase
         .from("affiliates")
         .insert([{
@@ -196,7 +193,6 @@ export default function Affiliate() {
 
       if (profileError) throw profileError;
 
-      // 4. Update parent referrer stats if valid
       if (cleanReferral) {
         const { data: referrer } = await supabase
           .from("affiliates")
@@ -236,7 +232,6 @@ export default function Affiliate() {
 
     try {
       await supabase.auth.signOut();
-      // 1. Gather profile security parameters before checking passwords
       const { data: profile } = await supabase
         .from("affiliates")
         .select("id, status, failed_login_attempts, lockout_until")
@@ -257,13 +252,11 @@ export default function Affiliate() {
         }
       }
 
-      // 2. Perform Primary Supabase Authentication Pass
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: loginForm.password,
       });
 
-      // 3. Handle Failure Scenarios gracefully
       if (authError) {
         if (profile) {
           let currentFailures = (profile.failed_login_attempts || 0) + 1;
@@ -285,14 +278,12 @@ export default function Affiliate() {
         return;
       }
 
-      // 4. Post-Login Configuration Match verification
       let { data: verifiedProfile } = await supabase
         .from("affiliates")
         .select("*")
         .eq("id", authData.user.id)
         .maybeSingle();
 
-      // Fix popup blocks for all users by safely creating a database record on-the-fly if it was missed
       if (!verifiedProfile) {
         const code = generateCode(cleanEmail.split("@")[0]);
         const { data: autoRepairedProfile, error: repairError } = await supabase
@@ -320,7 +311,6 @@ export default function Affiliate() {
         if (repairError) throw new Error("Could not initialize your tracking profile configuration parameters.");
         verifiedProfile = autoRepairedProfile;
       } else {
-        // Clear parameters down on normal verification pass
         await supabase
           .from("affiliates")
           .update({ failed_login_attempts: 0, lockout_until: null })
@@ -424,7 +414,7 @@ export default function Affiliate() {
           <div className="max-w-5xl mx-auto">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
-                <Badge className="bg-accent/20 text-accent border-accent/30 mb-3 text-xs font-bold tracking-widest">Affiliate Dashboard</Badge>
+                <Badge className="bg-accent/20 text-accent border-accent/30 mb-3 text-xs font-bold tracking-widest">Dashboard</Badge>
                 <h1 className="text-4xl font-black text-foreground">Welcome, {affiliate.name?.split(" ")[0]}!</h1>
                 <button onClick={handleSignOut}
                   className="text-muted-foreground text-xs hover:text-destructive mt-1 transition-colors">Sign Out</button>
@@ -438,7 +428,7 @@ export default function Affiliate() {
               {!isSuspended &&
                 <div className="bg-card rounded-2xl p-4 flex items-center gap-3 border border-border">
                   <div>
-                    <p className="text-card-foreground/50 text-xs uppercase tracking-wide">Your Referral Code</p>
+                    <p className="text-card-foreground/50 text-xs uppercase tracking-wide">Your Code</p>
                     <p className={`font-black text-2xl ${isPending ? "blur-sm select-none text-muted-foreground" : "text-accent"}`}>
                       {isPending ? "PENDING" : affiliate.referral_code}
                     </p>
@@ -480,7 +470,7 @@ export default function Affiliate() {
               <AlertTriangle className="h-6 w-6 text-destructive shrink-0 mt-0.5" />
               <div>
                 <p className="text-destructive font-bold text-base">Account Suspended</p>
-                <p className="text-destructive/80 text-sm mt-1">Your affiliate account has been suspended.
+                <p className="text-destructive/80 text-sm mt-1">Your account has been suspended.
                   Your referral code is currently inactive and no commissions can be earned.
                   Please contact us on WhatsApp (+2348163914835) for assistance.</p>
               </div>
@@ -494,7 +484,8 @@ export default function Affiliate() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
               {stats.map((s, i) =>
                 <AnimatedElement key={s.label} delay={i * 80}>
-                  <div className={`bg-card rounded-2xl p-5 border border-border hover:shadow-xl transition-all duration-300 group ${isPending || isSuspended ? "opacity-60" : ""}`}>
+                  <div 
+                  className={`bg-card rounded-2xl p-5 border border-border hover:shadow-xl transition-all duration-300 group ${isPending || isSuspended ? "opacity-60" : ""}`}>
                     <s.icon className={`h-6 w-6 ${s.color} mb-3 group-hover:scale-110 transition-transform`} />
                     <p className={`font-black text-2xl ${s.color}`}>{s.value}</p>
                     <p className="text-card-foreground/50 text-xs mt-1">{s.label}</p>
@@ -620,13 +611,16 @@ export default function Affiliate() {
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-accent/10 rounded-full blur-[100px] pointer-events-none" />
 
         <div className="max-w-6xl mx-auto text-center relative z-10">
-          <Badge className="bg-accent/20 text-accent border-accent/30 mb-6 text-xs font-bold tracking-widest uppercase">Affiliate Program</Badge>
+          <Badge className="bg-accent/20 text-accent border-accent/30 mb-6 text-xs font-bold tracking-widest uppercase">Earn with Us</Badge>
           <h1 className="text-5xl sm:text-7xl font-black text-foreground mb-6 leading-tight">
             Earn with <br /><span className="bg-gradient-to-r from-accent via-primary to-accent bg-clip-text text-transparent animate-gradient-x">D-Kadris</span>
           </h1>
-          <p className="text-muted-foreground text-xl max-w-2xl mx-auto mb-8">Share your unique link, earn 10% on every order you generate. No cap. No stress. Pure income.</p>
+          {/* UPDATED DESCRIPTION */}
+          <p className="text-muted-foreground text-xl max-w-2xl mx-auto mb-8">
+            Earn 10% commission every time someone purchases through your unique D-Kadris link. There's no registration fee, no investment, and no inventory to keep—just share our products and earn from real sales.
+          </p>
           <div className="flex flex-wrap justify-center gap-8 mb-12">
-            {[["10%", "Commission Rate"], ["₦500", "Sign-up Bonus"], ["24h", "Payout Processing"], ["500+", "Active Affiliates"]].map(([num, label]) =>
+            {[["10%", "Commission Rate"], ["₦500", "Sign-up Bonus"], ["24h", "Payout Processing"], ["500+", "Active Partners"]].map(([num, label]) =>
               <div key={label} className="text-center min-w-[100px]">
                 <div className="text-3xl font-black text-accent">{num}</div>
                 <div className="text-muted-foreground text-sm">{label}</div>
@@ -641,7 +635,7 @@ export default function Affiliate() {
         <section className="bg-background py-20 px-6 pb-28">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-black text-foreground mb-3">Why Join Our Program?</h2>
+              <h2 className="text-4xl font-black text-foreground mb-3">Why Partner With Us?</h2>
               <p className="text-muted-foreground">Built for Nigerian fashion influencers, content creators, and denim lovers.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-16">
@@ -665,13 +659,13 @@ export default function Affiliate() {
               <div className="max-w-lg mx-auto">
                 <Tabs value={tab} onValueChange={setTab}>
                   <TabsList className="w-full bg-muted mb-8 rounded-full p-1">
-                    <TabsTrigger value="join" className="flex-1 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-bold">Join as Affiliate</TabsTrigger>
+                    <TabsTrigger value="join" className="flex-1 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-bold">Join Now</TabsTrigger>
                     <TabsTrigger value="login" className="flex-1 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-bold">Log In</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="join">
                     <div className="bg-card rounded-2xl p-8 border border-border shadow-2xl">
-                      <h3 className="text-card-foreground font-black text-2xl mb-6 text-center">Create Affiliate Account</h3>
+                      <h3 className="text-card-foreground font-black text-2xl mb-6 text-center">Create Account</h3>
                       {error && <p className="text-destructive text-sm mb-4 bg-destructive/10 rounded-lg p-3">{error}</p>}
 
                       <div className="flex items-center gap-2 bg-accent/10 border border-accent/20 rounded-xl px-3 py-2 mb-4">
@@ -695,7 +689,7 @@ export default function Affiliate() {
                         <div>
                           <Label className="text-card-foreground/70 text-xs uppercase tracking-wide">Referral Code (optional)</Label>
                           <Input value={form.referral_code} onChange={(e) => setForm((f) => ({ ...f, referral_code: e.target.value }))} className="bg-muted border-border text-card-foreground mt-1 rounded-xl h-12" placeholder="Who referred you?" />
-                          <p className="text-muted-foreground text-xs mt-1">Referring affiliate earns ₦300 bonus.Self-referral is strictly prohibited.</p>
+                          <p className="text-muted-foreground text-xs mt-1">Referring partner earns ₦300 bonus. Self-referral is strictly prohibited.</p>
                         </div>
                         <div className="flex items-start gap-3 pt-2">
                           <input type="checkbox" id="terms" checked={form.agreed} onChange={(e) => setForm((f) => ({ ...f, agreed: e.target.checked }))} className="mt-1 accent-primary" />
@@ -716,7 +710,7 @@ export default function Affiliate() {
 
                   <TabsContent value="login">
                     <div className="bg-card rounded-2xl p-8 border border-border shadow-2xl">
-                      <h3 className="text-card-foreground font-black text-2xl mb-6 text-center">Affiliate Login</h3>
+                      <h3 className="text-card-foreground font-black text-2xl mb-6 text-center">Login</h3>
                       {error && <p className="text-destructive text-sm mb-4 bg-destructive/10 rounded-lg p-3">{error}</p>}
                       <form onSubmit={handleLogin} className="space-y-4">
                         <div><Label className="text-card-foreground/70 text-xs uppercase tracking-wide">Email Address</Label><Input type="email" value={loginForm.email} onChange={(e) => setLoginForm((f) => ({ ...f, email: e.target.value }))} className="bg-muted border-border text-card-foreground mt-1 rounded-xl h-12" required /></div>
@@ -743,9 +737,9 @@ export default function Affiliate() {
             <p className="text-primary-foreground/70 mb-12 max-w-xl mx-auto">Three simple steps to start earning with D-Kadris Denims</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
               {[
-                { step: "01", title: "Register Free", desc: "Sign up with your details and get your unique referral code instantly. Receive ₦500 bonus on approval." },
-                { step: "02", title: "Share Your Code", desc: "Tell buyers to enter your referral code in checkout. Post on WhatsApp, Instagram, TikTok." },
-                { step: "03", title: "Earn 10%", desc: "Every order with your code earns you 10% commission. Withdraw once you hit ₦5,000." }
+                { step: "01", title: "Register Free", desc: "Sign up with your details and get your unique referral link instantly. Receive ₦500 bonus on approval." },
+                { step: "02", title: "Share Your Link", desc: "Share your code or dynamic link across platforms. Post on WhatsApp, Instagram, TikTok." },
+                { step: "03", title: "Earn 10%", desc: "Every order via your link earns you 10% commission. Withdraw once you hit ₦5,000." }
               ].map((step, i) =>
                 <AnimatedElement key={step.step} delay={i * 100}>
                   <div className="text-center">
@@ -765,4 +759,4 @@ export default function Affiliate() {
         <MessageCircle className="h-7 w-7 text-accent-foreground" />
       </a>
     </div>);
-}
+        }
