@@ -3,11 +3,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Shield } from "lucide-react";
 
 const TERMS = [
-  { title: "10% Commission Structure", body: "You earn 10% commission on all successful sales generated using your unique D-Kadris referral code. Commissions are calculated based on the product sale price and are credited to your affiliate wallet only after the admin confirms payment received." },
-  { title: "Payout Threshold", body: "Payouts are guaranteed once your wallet balance meets or exceeds the \u20a65,000 threshold. Below this amount, payouts cannot be processed. Once the threshold is met, click 'Request Payout' and provide your bank details for processing within 24\u201348 hours." },
-  { title: "No Spamming", body: "Affiliates must NOT spam referral links or codes. This includes unsolicited mass messaging, fake engagement, or distributing links via deceptive means. Violations will result in immediate account suspension without notice." },
-  { title: "Account Activity Requirement", body: "Affiliates must actively log in and access their dashboard. Accounts that remain entirely unopened or unused for 3 consecutive months will be automatically flagged and suspended. You will be notified by email before suspension takes effect." },
-  { title: "Customer Must Enter Your Code", body: "Affiliates are responsible for explicitly urging their buyers to input the referral code in the designated 'REFERRAL CODE' field during custom tailoring or product checkout. If a customer fails to enter your code, the sale is considered void and no 10% commission will be awarded \u2014 no exceptions." },
+  { title: "10% Commission Structure", body: "You earn 10% commission on all successful sales generated using your unique D-Kadris referral code. Commissions are calculated based on the product sale price and are credited to your referral wallet only after the admin confirms payment received." },
+  { title: "Payout Threshold", body: "Payouts are guaranteed once your wallet balance meets or exceeds the ₦5,000 threshold. Below this amount, payouts cannot be processed. Once the threshold is met, click 'Request Payout' and provide your bank details for processing within 24–48 hours." },
+  { title: "No Spamming", body: "Partners must NOT spam referral links or codes. This includes unsolicited mass messaging, fake engagement, or distributing links via deceptive means. Violations will result in immediate account suspension without notice." },
+  { title: "Account Activity Requirement", body: "Partners must actively log in and access their dashboard. Accounts that remain entirely unopened or unused for 3 consecutive months will be automatically flagged and suspended. You will be notified by email before suspension takes effect." },
+  { title: "Customer Must Enter Your Code", body: "You are responsible for explicitly urging your buyers to input the referral code in the designated 'REFERRAL CODE' field during custom tailoring or product checkout. If a customer fails to enter your code, the sale is considered void and no 10% commission will be awarded — no exceptions." },
   { title: "Self-Referral Prohibited", body: "Using your own referral code on your own orders is strictly prohibited. Any self-referral detected will be voided immediately and may result in account suspension." },
   { title: "Account Status", body: "All new accounts start in 'Pending' status and must be reviewed and approved by an admin before they can earn commissions. You will be notified via email once your account is approved or if any status changes occur." },
 ];
@@ -22,9 +22,9 @@ export default function TermsModal({ open, onClose }) {
             <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
               <Shield className="h-5 w-5 text-gray-700" />
             </div>
-            <DialogTitle className="font-black text-xl text-gray-900">Affiliate Terms & Conditions</DialogTitle>
+            <DialogTitle className="font-black text-xl text-gray-900">Partner Terms & Conditions</DialogTitle>
           </div>
-          <p className="text-gray-500 text-sm">Please read these rules carefully before joining the D-Kadris Affiliate Program.</p>
+          <p className="text-gray-500 text-sm">Please read these rules carefully before joining the D-Kadris Referral Program.</p>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto pr-1 mt-2" style={{ overflowY: "auto" }}>
           <div className="space-y-5">
