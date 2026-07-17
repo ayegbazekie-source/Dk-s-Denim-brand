@@ -24,10 +24,11 @@ const POLICY_KEYS = {
     title: "Terms & Conditions", 
     default: "By using D-Kadris Denims, you agree to our terms. All products are handcrafted and may have slight variations." 
   },
-  affiliate:{ 
+  // CHANGED FROM 'affiliate' TO 'earn' AND UPDATED LABELS/DEFAULTS
+  earn: { 
     key: "affiliate_terms", 
-    title: "Affiliate Terms", 
-    default: "Affiliates earn 10% commission on verified sales. Payout threshold is ₦5,000. Self-referral and spam are strictly prohibited." 
+    title: "Earn with D-kadris Terms", 
+    default: "Partners earn 10% commission on verified sales. Payout threshold is ₦5,000. Self-referral and spam are strictly prohibited." 
   },
 };
 
@@ -35,7 +36,9 @@ export default function PolicyModal({ policyType, open, onClose }) {
   const [content, setContent] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const policy = POLICY_KEYS[policyType];
+  // Fallback support if an older caller uses 'affiliate' dynamically as the policyType prop
+  const activeKey = policyType === "affiliate" ? "earn" : policyType;
+  const policy = POLICY_KEYS[activeKey];
 
   useEffect(() => {
     if (!open || !policy) return;
@@ -66,7 +69,7 @@ export default function PolicyModal({ policyType, open, onClose }) {
     }
 
     fetchPolicyContent();
-  }, [open, policyType]);
+  }, [open, activeKey]);
 
   if (!policy) return null;
 
