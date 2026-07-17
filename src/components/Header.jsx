@@ -45,7 +45,7 @@ export default function Header() {
   const navLinks = [
     { label: "HOME", to: "/" },
     { label: "SHOP", to: "/Catalog" },
-    { label: "EARN WITH US", to: "/Earn" },
+    { label: "EARN WITH US", to: "/affiliate" },
   ];
 
   const isActive = (to) => location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
