@@ -142,7 +142,8 @@ export default function Footer() {
             <ul className="space-y-3 font-body">
               <li><Link to="/" className="text-muted-foreground hover:text-accent transition-colors text-sm">Home</Link></li>
               <li><Link to="/Catalog" className="text-muted-foreground hover:text-accent transition-colors text-sm">Shop Collection</Link></li>
-              <li><Link to="/Affiliate" className="text-muted-foreground hover:text-accent transition-colors text-sm">Affiliate Program</Link></li>
+              {/* UPDATED ROUTE AND LINK TEXT */}
+              <li><Link to="/Earn" className="text-muted-foreground hover:text-accent transition-colors text-sm">Earn with Us</Link></li>
               
               {/* Redirects to Catalog grid page */}
               <li>
@@ -173,7 +174,8 @@ export default function Footer() {
               <li><a href="#" onClick={openPolicy("refund")} className="text-muted-foreground hover:text-accent transition-colors text-sm">Refund Policy</a></li>
               <li><a href="#" onClick={openPolicy("shipping")} className="text-muted-foreground hover:text-accent transition-colors text-sm">Shipping Policy</a></li>
               <li><a href="#" onClick={openPolicy("terms")} className="text-muted-foreground hover:text-accent transition-colors text-sm">Terms & Conditions</a></li>
-              <li><a href="#" onClick={openPolicy("affiliate")} className="text-muted-foreground hover:text-accent transition-colors text-sm">Affiliate Terms</a></li>
+              {/* UPDATED PARAMETER KEY AND POLICY TITLE */}
+              <li><a href="#" onClick={openPolicy("earn")} className="text-muted-foreground hover:text-accent transition-colors text-sm">Earn with D-kadris Terms</a></li>
             </ul>
           </div>
 
@@ -227,4 +229,4 @@ export default function Footer() {
       </div>
     </footer>
   );
-}
+        }
