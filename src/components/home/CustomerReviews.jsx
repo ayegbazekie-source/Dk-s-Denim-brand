@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Star, MessageSquare, ThumbsUp, Send } from "lucide-react";
+import { Star, MessageSquare, ThumbsUp, Send, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Import your central validated Supabase client client instance
 import { supabase } from "@/lib/supabase"; 
@@ -90,6 +90,10 @@ export default function CustomerReviews() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  // PAGINATION STATE: Set to 3 items max per view
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 3;
+
   // Fetch verified reviews from Supabase
   const loadReviews = async () => {
     try {
@@ -136,8 +140,8 @@ export default function CustomerReviews() {
 
       setSubmitted(true);
       setShowForm(false);
-      // Reset layout forms
       setForm({ name: "", location: "", product_purchased: "", review: "", rating: 5 });
+      setCurrentPage(1); // Reset back to first page upon a new review entry
       loadReviews();
     } catch (err) {
       console.error("Error creating testimonial review record:", err.message);
@@ -149,6 +153,26 @@ export default function CustomerReviews() {
   const avgRating = reviews.length > 0 
     ? (reviews.reduce((s, r) => s + (r.rating || 5), 0) / reviews.length).toFixed(1) 
     : "5.0";
+
+  // CALCULATE ACTIVE PAGE BUNDLES
+  const totalPages = Math.ceil(reviews.length / itemsPerPage);
+  const indexOfLastReview = currentPage * itemsPerPage;
+  const indexOfFirstReview = indexOfLastReview - itemsPerPage;
+  const currentReviewsSlice = reviews.slice(indexOfFirstReview, indexOfLastReview);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+      document.getElementById("reviews")?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+      document.getElementById("reviews")?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   return (
     <section className="bg-muted py-32 px-6 border-y border-border/30" id="reviews">
@@ -220,22 +244,52 @@ export default function CustomerReviews() {
         {loading ? (
           <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /></div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {reviews.slice(0, 9).map((r, i) => (
-              <AnimatedElement key={r.id} delay={i * 60}>
-                <ReviewCard review={r} />
-              </AnimatedElement>
-            ))}
-            {reviews.length === 0 && (
-              <div className="col-span-3 text-center py-16 text-muted-foreground">
-                <Star className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p className="text-lg">Be the first to leave a review!</p>
+          <>
+            {/* The active sliced reviews mapping */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {currentReviewsSlice.map((r, i) => (
+                <AnimatedElement key={r.id || i} delay={i * 60}>
+                  <ReviewCard review={r} />
+                </AnimatedElement>
+              ))}
+              {reviews.length === 0 && (
+                <div className="col-span-3 text-center py-16 text-muted-foreground">
+                  <Star className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                  <p className="text-lg">Be the first to leave a review!</p>
+                </div>
+              )}
+            </div>
+
+            {/* NEW PAGINATION INTERFACE CONTROLS */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-12 pt-4">
+                <Button 
+                  onClick={handlePrevPage} 
+                  disabled={currentPage === 1}
+                  variant="outline"
+                  className="rounded-full w-12 h-12 p-0 border-border bg-card hover:bg-muted text-foreground transition-all disabled:opacity-30"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                
+                <span className="text-sm font-medium text-muted-foreground tracking-wide font-sans">
+                  Page <strong className="text-foreground font-black">{currentPage}</strong> of {totalPages}
+                </span>
+
+                <Button 
+                  onClick={handleNextPage} 
+                  disabled={currentPage === totalPages}
+                  variant="outline"
+                  className="rounded-full w-12 h-12 p-0 border-border bg-card hover:bg-muted text-foreground transition-all disabled:opacity-30"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </section>
   );
-}
-  
+            }
+                  
