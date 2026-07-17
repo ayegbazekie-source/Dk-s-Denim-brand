@@ -117,9 +117,11 @@ function HeroSection({ featuredProducts, loadingProducts }) {
               Shop Now
             </Button>
           </Link>
+          
+          {/* RENAMED FROM 'Affiliate Dashboard' TO 'Earn with D-kadris' */}
           <Link to="/Affiliate" className="w-full sm:w-auto">
             <Button className="w-full bg-[#cbd5e1] text-[#1e293b] font-bold px-10 py-6 text-sm sm:text-base rounded-full hover:scale-105 transition-all duration-500 border border-transparent hover:bg-white">
-              Affiliate Dashboard
+              Earn with D-kadris
             </Button>
           </Link>
         </motion.div>
@@ -158,6 +160,7 @@ function FloatingDivider() {
   )
 }
 
+// ... Rest of the file components remain exactly intact
 function FeaturedCollectionsSection({ featuredProducts, loading }) {
   const staticFallback = [
     { id: "1", name: "Kadris Signature Jacket", category: "Jackets", image_url: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?q=80&w=1000", is_featured: true },
@@ -181,59 +184,19 @@ function FeaturedCollectionsSection({ featuredProducts, loading }) {
           <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-base">Each piece is tailored with precision — handcrafted by master tailors in Nigeria, designed for the modern world.</p>
         </AnimatedElement>
 
-        {/* 
-          LAYOUT UPDATE: 
-          - Completely removed the horizontal carousel behavior (`overflow-x-auto` & `flex-row`).
-          - Implemented a responsive grid that stays 2-columns on mobile (`grid-cols-2`) and transitions into a beautiful, asymmetrical layout on desktop screens (`md:grid-cols-12`).
-        */}
-        <div 
-          className={`
-            grid grid-cols-2 gap-3 sm:gap-6
-            md:grid-cols-12 md:gap-8
-            ${loading ? "opacity-50" : "opacity-100"} transition-opacity duration-700
-          `}
-        >
+        <div className={`grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-12 md:gap-8 ${loading ? "opacity-50" : "opacity-100"} transition-opacity duration-700`}>
           {featured.map((product, index) => {
-            // Editorial custom size spans to create clean layout variety on desktop
-            const gridSpans = [
-              "md:col-span-7", 
-              "md:col-span-5", 
-              "md:col-span-4", 
-              "md:col-span-8", 
-              "md:col-span-6", 
-              "md:col-span-6", 
-            ];
-
+            const gridSpans = [ "md:col-span-7", "md:col-span-5", "md:col-span-4", "md:col-span-8", "md:col-span-6", "md:col-span-6" ];
             return (
-              <div 
-                key={product.id || index} 
-                className={`${gridSpans[index] || "md:col-span-4"}`}
-              >
+              <div key={product.id || index} className={`${gridSpans[index] || "md:col-span-4"}`}>
                 <AnimatedElement delay={index * 50}>
                   <Link to="/Catalog">
-                    {/* 
-                      CARD OPTIMIZATION:
-                      - Changed mobile aspect ratio to `aspect-[3/4]` to prevent vertical stretching.
-                      - Uses `object-cover` safely because the grid cells are small enough to keep the whole item elegantly centered and clear.
-                    */}
                     <div className="group relative overflow-hidden rounded-2xl md:rounded-[2rem] bg-card cursor-pointer aspect-[3/4] md:aspect-[16/11] lg:aspect-square xl:aspect-[4/5] shadow-lg md:shadow-2xl shadow-black/10 hover:-translate-y-1.5 transition-all duration-500 border border-white/5">
-                      <img 
-                        src={product.image_url} 
-                        alt={product.name} 
-                        className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105" 
-                      />
-                      
-                      {/* Subtle elegant dark gradient overlay over image bottom to keep text legible */}
+                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105" />
                       <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/20 to-transparent opacity-85 group-hover:opacity-90 transition-opacity duration-300" />
-                      
-                      {/* Scaled down text layout to fit mobile dual columns cleanly */}
                       <div className="absolute bottom-0 left-0 p-3 sm:p-5 md:p-8 w-full">
-                        <p className="text-accent text-[8px] sm:text-[10px] md:text-xs uppercase tracking-widest mb-1 font-bold">
-                          {product.category}
-                        </p>
-                        <h3 className="text-foreground font-black text-xs sm:text-base md:text-2xl mb-1 md:mb-2 font-serif leading-tight line-clamp-1 md:line-clamp-none">
-                          {product.name}
-                        </h3>
+                        <p className="text-accent text-[8px] sm:text-[10px] md:text-xs uppercase tracking-widest mb-1 font-bold">{product.category}</p>
+                        <h3 className="text-foreground font-black text-xs sm:text-base md:text-2xl mb-1 md:mb-2 font-serif leading-tight line-clamp-1 md:line-clamp-none">{product.name}</h3>
                         <div className="hidden sm:flex items-center text-foreground/70 text-[10px] md:text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           Explore Piece <ArrowRight className="ml-1.5 h-3.5 w-3.5 text-accent" />
                         </div>
@@ -263,12 +226,7 @@ function WhyDKadrisSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <AnimatedElement>
             <div className="relative rounded-[2rem] overflow-hidden aspect-[4/5] shadow-2xl">
-              <img 
-                src="https://uwbvliklifubrfvpunag.supabase.co/storage/v1/object/public/brand-assets/craftsmanship.jpg" 
-                alt="Craftsmanship" 
-                className="w-full h-full object-cover scale-105" 
-                style={{ animation: 'slowZoom 20s ease-in-out infinite alternate' }} 
-              />
+              <img src="https://uwbvliklifubrfvpunag.supabase.co/storage/v1/object/public/brand-assets/craftsmanship.jpg" alt="Craftsmanship" className="w-full h-full object-cover scale-105" style={{ animation: 'slowZoom 20s ease-in-out infinite alternate' }} />
               <div className="absolute inset-0 bg-gradient-to-tr from-background/80 via-transparent to-transparent" />
               <div className="absolute bottom-8 left-8">
                 <div className="backdrop-blur-md bg-background/30 border border-white/10 text-foreground rounded-2xl p-6 shadow-2xl">
@@ -278,14 +236,12 @@ function WhyDKadrisSection() {
               </div>
             </div>
           </AnimatedElement>
-          
           <div>
             <AnimatedElement delay={100}>
               <span className="text-accent text-sm font-bold tracking-[0.2em] uppercase mb-4 block">Our Story</span>
               <h3 className="text-foreground text-4xl sm:text-5xl font-black mb-8 leading-[1.1] font-serif">Built by Tailors, <br />Worn by Leaders</h3>
               <p className="text-muted-foreground text-lg leading-relaxed mb-12">D-Kadris was born from a simple frustration: the best denim in the world didn't fit African body types properly. Our master tailors in Nigeria decided to change that, creating a brand synonymous with uncompromising quality and perfect fit.</p>
             </AnimatedElement>
-            
             <div className="flex flex-col gap-8">
               {reasons.map((r, i) => (
                 <AnimatedElement key={r.title} delay={200 + (i * 100)}>
@@ -320,13 +276,9 @@ function CustomOrderSection() {
       <div className="max-w-3xl mx-auto text-center relative z-10">
         <AnimatedElement>
           <h2 className="text-4xl sm:text-5xl font-bold text-accent mb-6 font-serif">Your Fit, Your Way</h2>
-          <p className="text-foreground/80 text-lg sm:text-xl mb-10 max-w-xl mx-auto font-light">
-            Contact us at +2348163914835 or dkadristailoringservice@gmail.com
-          </p>
+          <p className="text-foreground/80 text-lg sm:text-xl mb-10 max-w-xl mx-auto font-light">Contact us at +2348163914835 or dkadristailoringservice@gmail.com</p>
           <Link to="/Catalog">
-            <Button className="bg-primary text-primary-foreground font-bold text-lg px-12 py-7 rounded-full hover:scale-105 transition-all duration-500 shadow-xl shadow-primary/20">
-              Start Custom Order
-            </Button>
+            <Button className="bg-primary text-primary-foreground font-bold text-lg px-12 py-7 rounded-full hover:scale-105 transition-all duration-500 shadow-xl shadow-primary/20">Start Custom Order</Button>
           </Link>
         </AnimatedElement>
       </div>
@@ -343,18 +295,8 @@ function NewsletterSection() {
     e.preventDefault();
     if (!email) return;
     setLoading(true);
-
     try {
-      const { error } = await supabase
-        .from("newsletter_subscribers") 
-        .insert([
-          {
-            email,
-            subscribed_date: new Date().toISOString(),
-            is_active: true
-          }
-        ]);
-
+      const { error } = await supabase.from("newsletter_subscribers").insert([{ email, subscribed_date: new Date().toISOString(), is_active: true }]);
       if (error) throw error;
       setSubmitted(true);
     } catch (err) {
@@ -372,7 +314,6 @@ function NewsletterSection() {
           <span className="text-accent text-sm font-bold tracking-[0.2em] uppercase mb-4 block">Exclusive Access</span>
           <h2 className="text-3xl sm:text-4xl font-black text-foreground mb-6 font-serif">Join the Inner Circle</h2>
           <p className="text-muted-foreground mb-10 text-lg">Subscribe to receive updates on new collections and custom tailoring availability.</p>
-          
           {submitted ? (
             <div className="bg-muted border border-border rounded-2xl p-8 max-w-md mx-auto">
               <h3 className="text-accent font-bold text-xl mb-2 font-serif">Welcome.</h3>
@@ -380,16 +321,9 @@ function NewsletterSection() {
             </div>
           ) : (
             <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto">
-              <Input
-                type="email"
-                placeholder="Enter your email address"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="flex-1 bg-muted border-transparent focus-visible:ring-accent text-foreground placeholder:text-muted-foreground rounded-full px-8 h-14 text-base shadow-inner"
-                required
-              />
+              <Input type="email" placeholder="Enter your email address" value={email} onChange={e => setEmail(e.target.value)} className="flex-1 bg-muted border-transparent focus-visible:ring-accent text-foreground placeholder:text-muted-foreground rounded-full px-8 h-14 text-base shadow-inner" required />
               <Button type="submit" disabled={loading} className="bg-accent text-accent-foreground font-bold px-10 h-14 rounded-full hover:scale-105 transition-all duration-300 whitespace-nowrap shadow-lg shadow-accent/20">
-                {loading ?"Joining..." : "Subscribe"}
+                {loading ? "Joining..." : "Subscribe"}
               </Button>
             </form>
           )}
@@ -408,30 +342,17 @@ export default function Home() {
   useEffect(() => {
     async function checkMaintenanceStatus() {
       try {
-        const { data, error } = await supabase
-          .from("settings")
-          .select("value")
-          .eq("key", "maintenance_mode")
-          .single();
-
-        if (!error && data) {
-          setIsMaintenance(data.value === "true");
-        }
+        const { data, error } = await supabase.from("settings").select("value").eq("key", "maintenance_mode").single();
+        if (!error && data) setIsMaintenance(data.value === "true");
       } catch (err) {
         console.error("Error reading application layout flags:", err);
       } finally {
         setLoading(false);
       }
     }
-
     async function fetchProducts() {
       try {
-        const { data, error } = await supabase
-          .from("products")
-          .select("*")
-          .order("updated_at", { ascending: false })
-          .limit(20);
-
+        const { data, error } = await supabase.from("products").select("*").order("updated_at", { ascending: false }).limit(20);
         if (error) throw error;
         setProducts(data || []);
       } catch (err) {
@@ -440,7 +361,6 @@ export default function Home() {
         setLoadingProducts(false);
       }
     }
-
     checkMaintenanceStatus();
     fetchProducts();
   }, []);
@@ -459,21 +379,12 @@ export default function Home() {
     return (
       <div className="bg-background min-h-[100svh] w-full fixed inset-0 z-[99999] flex flex-col items-center justify-center text-center px-6 overflow-hidden selection:bg-accent/30">
         <div className="absolute inset-0 bg-background z-0" />
-        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
-          <div className="w-[60vw] h-[60vw] bg-accent/5 rounded-full blur-[130px]" />
-        </div>
-        
+        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none"><div className="w-[60vw] h-[60vw] bg-accent/5 rounded-full blur-[130px]" /></div>
         <div className="relative z-10 max-w-lg mx-auto flex flex-col items-center">
-          <h1 className="text-4xl sm:text-6xl font-black text-accent mb-6 font-serif tracking-tight leading-tight">
-            Under Maintenance
-          </h1>
-          <p className="text-foreground/80 text-base sm:text-xl font-light mb-10 max-w-md leading-relaxed">
-            We are working behind the scenes to enhance your custom denim experience. The platform will return online shortly.
-          </p>
+          <h1 className="text-4xl sm:text-6xl font-black text-accent mb-6 font-serif tracking-tight leading-tight">Under Maintenance</h1>
+          <p className="text-foreground/80 text-base sm:text-xl font-light mb-10 max-w-md leading-relaxed">We are working behind the scenes to enhance your custom denim experience. The platform will return online shortly.</p>
           <div className="w-24 h-[1px] bg-border/40 mb-6" />
-          <div className="text-xs text-muted-foreground uppercase tracking-[0.2em] font-medium">
-            Admin Lockdown Active
-          </div>
+          <div className="text-xs text-muted-foreground uppercase tracking-[0.2em] font-medium">Admin Lockdown Active</div>
         </div>
       </div>
     );
@@ -489,12 +400,9 @@ export default function Home() {
       <CustomerReviews />
       <NewsletterSection />
       
-      <a href="https://wa.me/2348163914835" target="_blank" rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-accent rounded-full flex items-center justify-center shadow-2xl shadow-accent/40 hover:scale-110 hover:-translate-y-2 transition-all duration-500 group">
+      <a href="https://wa.me/2348163914835" target="_blank" rel="noopener noreferrer" className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-accent rounded-full flex items-center justify-center shadow-2xl shadow-accent/40 hover:scale-110 hover:-translate-y-2 transition-all duration-500 group">
         <MessageCircle className="h-8 w-8 text-accent-foreground" />
-        <span className="absolute right-20 bg-background border border-border text-foreground text-sm font-bold px-4 py-2.5 rounded-full whitespace-nowrap opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0 transition-all duration-300 shadow-xl pointer-events-none">
-          Chat with a Tailor
-        </span>
+        <span className="absolute right-20 bg-background border border-border text-foreground text-sm font-bold px-4 py-2.5 rounded-full whitespace-nowrap opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0 transition-all duration-300 shadow-xl pointer-events-none">Chat with a Tailor</span>
       </a>
     </div>
   );
