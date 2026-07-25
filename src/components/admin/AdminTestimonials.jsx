@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase"; 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,30 +18,29 @@ export default function AdminTestimonials() {
   const [editingItem, setEditingItem] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [savingEdit, setSavingEdit] = useState(false);
-  const [tableName, setTableName] = useState("testimonials"); // Tracks target table
+  
+  // Use a ref so the active table name is always current across async function calls
+  const activeTableRef = useRef("testimonials");
 
-  // Fetch reviews safely with fallbacks
+  // Fetch reviews safely with robust fallbacks
   const load = async () => {
     try {
       setLoading(true);
 
-      // Attempt primary fetch from "testimonials"
-      let { data, error } = await supabase
-        .from("testimonials")
-        .select("*");
+      // Attempt fetch from current active table (or default "testimonials")
+      let currentTable = activeTableRef.current;
+      let { data, error } = await supabase.from(currentTable).select("*");
 
-      // Fallback check: If "testimonials" returns empty or fails, check "reviews" table
-      if ((error || !data || data.length === 0) && tableName === "testimonials") {
+      // Fallback check: If "testimonials" returned empty or failed, switch to "reviews"
+      if ((error || !data || data.length === 0) && currentTable === "testimonials") {
         const fallbackRes = await supabase.from("reviews").select("*");
         if (!fallbackRes.error && fallbackRes.data && fallbackRes.data.length > 0) {
           data = fallbackRes.data;
-          setTableName("reviews");
+          activeTableRef.current = "reviews";
         }
       }
 
-      if (error && !data) throw error;
-
-      // Safe sorting: handling missing dates or ratings gracefully
+      // Sorting: handling missing dates or ratings gracefully
       const sorted = (data || []).sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -50,7 +49,7 @@ export default function AdminTestimonials() {
 
       setItems(sorted);
     } catch (err) {
-      console.error("Error loading reviews/testimonials:", err.message);
+      console.error("Error loading reviews:", err.message);
     } finally {
       setLoading(false);
     }
@@ -58,11 +57,11 @@ export default function AdminTestimonials() {
 
   useEffect(() => { load(); }, []);
 
-  // Handle deleting a testimonial/review
+  // Handle deleting a review
   const handleDelete = async (id) => {
     try {
       const { error } = await supabase
-        .from(tableName)
+        .from(activeTableRef.current)
         .delete()
         .eq("id", id);
 
@@ -80,20 +79,34 @@ export default function AdminTestimonials() {
   const handleReply = async (e) => {
     e.preventDefault();
     setSavingReply(true);
+
     try {
-      const { error } = await supabase
-        .from(tableName)
+      const targetTable = activeTableRef.current;
+      
+      // Try updating admin_reply + replied_at
+      let { error } = await supabase
+        .from(targetTable)
         .update({
           admin_reply: replyText,
           replied_at: new Date().toISOString()
         })
         .eq("id", replyingTo.id);
 
+      // Gracefully handle missing 'replied_at' column if table structure differs
+      if (error && error.message.includes("replied_at")) {
+        const fallbackUpdate = await supabase
+          .from(targetTable)
+          .update({ admin_reply: replyText })
+          .eq("id", replyingTo.id);
+
+        error = fallbackUpdate.error;
+      }
+
       if (error) throw error;
 
       setReplyingTo(null);
       setReplyText("");
-      load();
+      await load();
     } catch (err) {
       console.error("Error saving reply:", err.message);
       alert(`Failed to save reply: ${err.message}`);
@@ -108,9 +121,9 @@ export default function AdminTestimonials() {
     setSavingEdit(true);
     try {
       const { error } = await supabase
-        .from(tableName)
+        .from(activeTableRef.current)
         .update({
-          name: editForm.name,
+          name: editForm.name || editForm.user_name,
           role: editForm.role,
           comment: editForm.comment || editForm.review || editForm.content,
           rating: parseInt(editForm.rating) || 5,
@@ -122,7 +135,7 @@ export default function AdminTestimonials() {
 
       setEditingItem(null);
       setEditForm({});
-      load();
+      await load();
     } catch (err) {
       console.error("Error updating review content:", err.message);
       alert(`Failed to save edits: ${err.message}`);
@@ -188,7 +201,7 @@ export default function AdminTestimonials() {
 
               {item.admin_reply && (
                 <div className="bg-accent/5 border border-accent/20 rounded-xl p-3 mb-3 text-xs">
-                  <p className="text-accent font-bold mb-1">Response:</p>
+                  <p className="text-accent font-bold mb-1">D-Kadris Team Reply:</p>
                   <p className="text-card-foreground/80 italic">"{item.admin_reply}"</p>
                 </div>
               )}
@@ -247,7 +260,7 @@ export default function AdminTestimonials() {
                 <Textarea 
                   value={replyText} 
                   onChange={e => setReplyText(e.target.value)} 
-                  placeholder="Thank you for your valuable response!..." 
+                  placeholder="Thank you for your response!..." 
                   className="bg-muted border-border text-card-foreground mt-1 min-h-[110px]" 
                   required 
                 />
@@ -263,7 +276,7 @@ export default function AdminTestimonials() {
         </DialogContent>
       </Dialog>
 
-      {/* Item Profile Editor Modal */}
+      {/* Edit Item Modal */}
       <Dialog open={!!editingItem} onOpenChange={() => { setEditingItem(null); setEditForm({}); }}>
         <DialogContent className="bg-card border-border text-card-foreground max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="font-black text-xl">Edit Review</DialogTitle></DialogHeader>
@@ -321,5 +334,5 @@ export default function AdminTestimonials() {
       )}
     </div>
   );
-      }
-                  
+              }
+        
