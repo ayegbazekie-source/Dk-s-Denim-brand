@@ -10,6 +10,7 @@ import AdminTestimonials from "../components/admin/AdminTestimonials";
 import AdminNewsletter from "../components/admin/AdminNewsletter";
 import AdminSettings from "../components/admin/AdminSettings";
 import AdminAnnouncements from "../components/admin/AdminAnnouncements";
+import AdminAnalytics from "../components/AdminAnalytics";
 import { Eye, EyeOff, Lock, Shield, LayoutDashboard, Package, ShoppingBag, Users, Star, Mail, Settings, Megaphone, LogOut, Menu, X } from "lucide-react";
 
 const ADMIN_PASSWORD = "Capable1#";
@@ -40,7 +41,7 @@ export default function Admin() {
   const [pwError, setPwError] = useState("");
   const [pwLoading, setPwLoading] = useState(false);
 
-    useEffect(() => {
+  useEffect(() => {
     // CRITICAL: If the master gate hasn't been solved yet, stop here.
     if (!unlocked) {
       setLoadingUser(false);
@@ -53,7 +54,8 @@ export default function Admin() {
     setLoadingUser(false);
 
   }, [unlocked]);
-    const handlePasswordSubmit = (e) => {
+  
+  const handlePasswordSubmit = (e) => {
     e.preventDefault();
     setPwLoading(true);
     setPwError("");
@@ -70,6 +72,7 @@ export default function Admin() {
       setPwLoading(false);
     }, 600);
   };
+
 
   // SCREEN CHECK 1: Render the Identity Verification Gate upfront if locked
   if (!unlocked) {
@@ -250,11 +253,11 @@ export default function Admin() {
           </div>
         </div>
 
-        <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="flex-1 p-6 overflow-y-auto">
+        <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="flex-1 p-6 overflow-y-auto space-y-6">
+          {activeTab === "overview" && <AdminAnalytics />}
           {ActiveComponent && <ActiveComponent />}
         </motion.div>
       </div>
     </div>
   );
-                    }
-                               
+}
