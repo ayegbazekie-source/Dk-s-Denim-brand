@@ -10,7 +10,7 @@ import AdminTestimonials from "../components/admin/AdminTestimonials";
 import AdminNewsletter from "../components/admin/AdminNewsletter";
 import AdminSettings from "../components/admin/AdminSettings";
 import AdminAnnouncements from "../components/admin/AdminAnnouncements";
-import AdminAnalytics from "../components/AdminAnalytics";
+import AdminAnalytics from "@/components/AdminAnalytics";
 import { Eye, EyeOff, Lock, Shield, LayoutDashboard, Package, ShoppingBag, Users, Star, Mail, Settings, Megaphone, LogOut, Menu, X } from "lucide-react";
 
 const ADMIN_PASSWORD = "Capable1#";
