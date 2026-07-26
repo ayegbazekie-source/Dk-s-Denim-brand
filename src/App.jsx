@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Home from './pages/Home';
@@ -10,14 +11,40 @@ import Catalog from './pages/Catalog';
 import Affiliate from './pages/Affiliate';
 import Layout from './components/Layout';
 import Admin from './pages/Admin';
+import { supabase } from '@/lib/supabase';
 
-// FIX: Pointing directly to the correct pages folder location
-import PageNotFound from './pages/PageNotFound';
+// Helper component to track page views on route changes
+const PageTracker = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Skip logging visits to admin routes
+    if (location.pathname.toLowerCase().startsWith('/admin')) return;
+
+    const logPageView = async () => {
+      try {
+        await supabase.from('page_views').insert([
+          {
+            page_path: location.pathname,
+            user_agent: navigator.userAgent,
+          },
+        ]);
+      } catch (err) {
+        console.error('Error logging page view:', err.message);
+      }
+    };
+
+    logPageView();
+  }, [location.pathname]);
+
+  return null;
+};
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, settings } = useAuth();
   const location = useLocation();
 
+  // Safely capture affiliate codes inside React's lifecycle
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
@@ -46,7 +73,7 @@ const AuthenticatedApp = () => {
     }
   }
 
-  // Strict Maintenance Flag Evaluation
+  // Parse both formats safely
   let isMaintenanceMode = false;
   if (Array.isArray(settings)) {
     const maintenanceRow = settings.find(item => item.key === 'maintenance_mode' || item.key === 'maintenance');
@@ -85,15 +112,18 @@ const AuthenticatedApp = () => {
   }
 
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/Catalog" element={<Catalog />} />
-        <Route path="/Affiliate" element={<Affiliate />} />
-      </Route>
-      <Route path="/Admin" element={<Admin />} />
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+    <>
+      <PageTracker />
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/Catalog" element={<Catalog />} />
+          <Route path="/Affiliate" element={<Affiliate />} />
+        </Route>
+        <Route path="/Admin" element={<Admin />} />
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    </>
   );
 };
 
