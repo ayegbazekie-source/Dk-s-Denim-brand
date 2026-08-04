@@ -41,16 +41,17 @@ export default function AdminOrders() {
     setUpdating(true);
     try {
       // 1. Update order status step
-      const { error } = await supabase
+      const { error: statusError } = await supabase
         .from("orders")
         .update({ status: targetStatus })
         .eq("id", id);
 
-      if (error) throw error;
+      if (statusError) throw statusError;
 
-      // 2. Automate Affiliate Commissions (10%) on 'confirmed' OR 'processing'
+      // 2. Automate Affiliate Commissions (10%) on 'confirmed' or 'processing'
       if ((targetStatus === "confirmed" || targetStatus === "processing") && orderContext?.affiliate_code) {
-        
+        const affCode = orderContext.affiliate_code;
+
         // Prevent duplicate commission entries for the same order
         const { data: existingTx } = await supabase
           .from("affiliate_transactions")
@@ -62,35 +63,47 @@ export default function AdminOrders() {
           const orderValue = Number(orderContext.total_amount || orderContext.total || 0);
           const payoutSum = orderValue * 0.10;
 
-          // Locate affiliate account
-          const { data: affiliate } = await supabase
+          // Locate affiliate account by matching 'referral_code'
+          const { data: affiliate, error: affErr } = await supabase
             .from("affiliates")
-            .select("id, balance, total_earnings")
-            .eq("code", orderContext.affiliate_code)
+            .select("*")
+            .eq("referral_code", affCode)
             .maybeSingle();
 
-          if (affiliate) {
-            // A. Record transaction history
+          if (affErr) {
+            console.error("Error querying affiliates:", affErr.message);
+          } else if (affiliate) {
+            // A. Record transaction in affiliate_transactions
             await supabase.from("affiliate_transactions").insert([{
               affiliate_id: affiliate.id,
-              code: orderContext.affiliate_code,
+              code: affCode,
               amount: payoutSum,
               type: "credit",
               order_id: id,
               created_at: new Date().toISOString()
             }]);
 
-            // B. Update affiliate active balance and earnings
-            const newBalance = Number(affiliate.balance || 0) + payoutSum;
-            const newTotalEarnings = Number(affiliate.total_earnings || 0) + payoutSum;
+            // B. Update pending payout and total earnings in affiliates table
+            const currentPending = Number(affiliate.pending_payout || 0);
+            const currentTotal = Number(affiliate.total_earnings || 0);
 
-            await supabase
+            const { error: updateErr } = await supabase
               .from("affiliates")
               .update({ 
-                balance: newBalance,
-                total_earnings: newTotalEarnings 
+                pending_payout: currentPending + payoutSum,
+                total_earnings: currentTotal + payoutSum 
               })
               .eq("id", affiliate.id);
+
+            if (updateErr) {
+              console.error("Error updating affiliate metrics:", updateErr.message);
+            } else {
+              // C. Mark commission as released on the order record
+              await supabase
+                .from("orders")
+                .update({ commission_released: true })
+                .eq("id", id);
+            }
           }
         }
       }
@@ -218,7 +231,7 @@ export default function AdminOrders() {
                     </button>
                   ))}
                 </div>
-                <p className="text-muted-foreground text-[11px] mt-2">💡 Selecting 'confirmed' or 'processing' automatically updates the affiliate's balance and transaction history.</p>
+                <p className="text-muted-foreground text-[11px] mt-2">💡 Selecting 'confirmed' or 'processing' automatically credits affiliate commission and updates earnings.</p>
               </div>
             </div>
           )}
@@ -226,4 +239,4 @@ export default function AdminOrders() {
       </Dialog>
     </div>
   );
-      }
+}
