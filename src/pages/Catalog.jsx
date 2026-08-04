@@ -538,19 +538,20 @@ export default function Catalog() {
                   
                   <a 
                     href={`https://wa.me/2348163914835?text=${encodeURIComponent(
-                      `*D-KADRIS BESPOKE ORDER*\n----------------------------------\n\n` +
-                      cartItems.map(item => {
-                        let block = `👕 *Garment:* ${item.name}\n🎨 *Finish:* ${item.color} | *Size:* ${item.size} | *Qty:* ${item.qty}\n`;
-                        if (item.isCustom && item.measurements) {
-                          block += `👤 *Client:* ${item.measurements.client}\n📞 *Phone:* ${item.measurements.phone}\n⚙️ *Fit Mapping:* ${item.fitPreference}\n`;
-                        }
-                        if (item.affiliateCode) {
-                          block += `🎟️ *Ref Code:* ${item.affiliateCode}\n`;
-                        }
-                        return block;
-                      }).join("\n----------------------------------\n\n") +
-                      `\n💰 *Total Gross:* ₦${cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}`
-                    )}`} 
+  `D-KADRIS BESPOKE ORDER\n-----------------------------------\n\n` +
+  cartItems.map(item => {
+    let block = `👕 *Garment:* ${item.name}\n🎨 *Finish:* ${item.color} | *Size:* ${item.size} | *Qty:* ${item.qty}\n`;
+    if (item.isCustom && item.measurements) {
+      block += `👤 *Client:* ${item.measurements.client}\n📞 *Phone:* ${item.measurements.phone}\n⚙️ *Fit Mapping:* ${item.fitPreference}\n`;
+    }
+    if (item.affiliateCode) {
+      block += `🏷️ *Ref Code:* ${item.affiliateCode}\n`;
+    }
+    return block;
+  }).join('\n-----------------------------------\n\n') +
+  `\n💰 *Total Gross:* ₦${cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}`
+)}`}
+ 
                     target="_blank" 
                     rel="noopener noreferrer"
                   >
