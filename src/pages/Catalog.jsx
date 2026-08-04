@@ -17,7 +17,7 @@ const CATEGORY_MAP = {
   DENIM: ["ALL", "Jackets", "Jeans", "Cargo", "Shorts", "Caps"],
   NATIVE: ["ALL", "Senators", "Kaftans", "Jalabia", "Caps"],
   CORPORATE: ["ALL", "Trousers", "Shirts"],
-  PREMIUM: ["ALL", "Native", "Jackets", "Accessories"]
+  PREMIUM: ["ALL", "Full-stack Native", "Jackets", "Agbada", "Accessories"]
 };
 
 const AnimatedElement = ({ children, className, delay = 0 }) => {
