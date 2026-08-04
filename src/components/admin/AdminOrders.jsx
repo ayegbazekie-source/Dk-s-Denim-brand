@@ -40,7 +40,7 @@ export default function AdminOrders() {
   const updateStatus = async (id, targetStatus, orderContext) => {
     setUpdating(true);
     try {
-      // 1. Update order status step (This automatically triggers your Brevo email from the database!)
+      // 1. Update order status step
       const { error } = await supabase
         .from("orders")
         .update({ status: targetStatus })
@@ -62,7 +62,7 @@ export default function AdminOrders() {
           const orderValue = Number(orderContext.total_amount || orderContext.total || 0);
           const payoutSum = orderValue * 0.10;
 
-          // Locate the affiliate partner row matching the applied code
+          // Locate affiliate account
           const { data: affiliate } = await supabase
             .from("affiliates")
             .select("id, balance, total_earnings")
@@ -70,7 +70,7 @@ export default function AdminOrders() {
             .maybeSingle();
 
           if (affiliate) {
-            // A. Log commission transaction item
+            // A. Record transaction history
             await supabase.from("affiliate_transactions").insert([{
               affiliate_id: affiliate.id,
               code: orderContext.affiliate_code,
@@ -80,7 +80,7 @@ export default function AdminOrders() {
               created_at: new Date().toISOString()
             }]);
 
-            // B. Instantly update active balance & total earnings on the affiliate profile
+            // B. Update affiliate active balance and earnings
             const newBalance = Number(affiliate.balance || 0) + payoutSum;
             const newTotalEarnings = Number(affiliate.total_earnings || 0) + payoutSum;
 
@@ -226,5 +226,4 @@ export default function AdminOrders() {
       </Dialog>
     </div>
   );
-    }
-                                                                                   
+                }
