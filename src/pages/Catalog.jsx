@@ -11,14 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Heart, MessageCircle, Package, X, Check, ShoppingBag, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 
-// Import verified Supabase client
 import { supabase } from "@/lib/supabase";
 
-// Updated category structure: Added 'Jalabia' and removed global 'ALL' map array reference 
 const CATEGORY_MAP = {
-  DENIM: ["ALL", "Jackets", "Jeans", "Cargo", "Shorts"],
+  DENIM: ["ALL", "Jackets", "Jeans", "Cargo", "Shorts", "Jumpsuits"],
   NATIVE: ["ALL", "Senators", "Kaftans", "Jalabia", "Caps"],
-  CORPORATE: ["ALL", "Trousers", "Shirts", "Two-piece"]
+  CORPORATE: ["ALL", "Trousers", "Shirts"]
 };
 
 const AnimatedElement = ({ children, className, delay = 0 }) => {
@@ -45,14 +43,12 @@ export default function Catalog() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  // Default to the first available category since 'ALL' was removed from top list
   const [selectedCategory, setSelectedCategory] = useState("DENIM");
   const [selectedSubcategory, setSelectedSubcategory] = useState("ALL");
   const [sortBy, setSortBy] = useState("DEFAULT");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeTab, setActiveTab] = useState("ready");
   
-  // Immersive Zoom Lightbox States
   const [lightboxImage, setLightboxImage] = useState(null);
   const [zoomScale, setZoomScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -106,40 +102,6 @@ export default function Catalog() {
   }, [cartItems]);
 
   useEffect(() => {
-    const clearTimeStamp = localStorage.getItem("dkadris_cart_expiry");
-    if (clearTimeStamp) {
-      const remaining = parseInt(clearTimeStamp, 10) - Date.now();
-      if (remaining <= 0) {
-        setCartItems([]);
-        localStorage.removeItem("dkadris_guest_cart");
-        localStorage.removeItem("dkadris_cart_expiry");
-      } else {
-        const timer = setTimeout(() => {
-          setCartItems([]);
-          localStorage.removeItem("dkadris_guest_cart");
-          localStorage.removeItem("dkadris_cart_expiry");
-        }, remaining);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, []);
-
-  const triggerCartExpiryCountdown = () => {
-    const fiveMinutes = 5 * 60 * 1000;
-    const expiryTime = Date.now() + fiveMinutes;
-    localStorage.setItem("dkadris_cart_expiry", expiryTime.toString());
-  };
-
-  const handleCategoryChange = (category) => {
-    setSelectedCategory(category);
-    setSelectedSubcategory("ALL");
-  };
-
-  const handleProceedToBespoke = () => {
-    setActiveTab("custom");
-  };
-
-  useEffect(() => {
     async function fetchProducts() {
       try {
         setLoading(true);
@@ -155,7 +117,6 @@ export default function Catalog() {
     fetchProducts();
   }, []);
 
-  // Pan handlers for image zoom assessment
   const handlePointerDown = (e) => {
     if (zoomScale === 1) return;
     setIsDragging(true);
@@ -180,6 +141,11 @@ export default function Catalog() {
     setDbError(null); 
     
     const calculatedTotal = (selectedProduct?.price || 0) * qty;
+    
+    // Always fetch active referral code from state or fallback directly to local storage
+    const activeRefCode = affiliateCode || localStorage.getItem("dkadris_affiliate_ref") || "";
+    const cleanAffiliateCode = activeRefCode ? activeRefCode.trim().toUpperCase() : null;
+
     const unifiedItem = {
       id: selectedProduct?.id,
       name: selectedProduct?.name,
@@ -188,7 +154,7 @@ export default function Catalog() {
       qty: qty,
       size: chosenSize || "Bespoke Custom", 
       color: chosenColor || `Fit: ${fitPref}`, 
-      affiliateCode: affiliateCode,
+      affiliateCode: cleanAffiliateCode,
       isCustom: true,
       fitPreference: fitPref,
       measurements: {
@@ -201,6 +167,7 @@ export default function Catalog() {
     };
 
     try {
+      // Explicitly pass affiliate_code into the root column of Supabase 'orders' table
       const { error } = await supabase.from("orders").insert([
         {
           customer_name: custName,
@@ -209,7 +176,7 @@ export default function Catalog() {
           total_amount: calculatedTotal, 
           status: "pending", 
           items: [unifiedItem], 
-          affiliate_code: affiliateCode || null,
+          affiliate_code: cleanAffiliateCode,
           created_at: new Date().toISOString()
         }
       ]);
@@ -248,7 +215,6 @@ export default function Catalog() {
   return (
     <div className="bg-[#0F1E36] text-white min-h-screen pt-24 pb-16 px-4 sm:px-6 relative selection:bg-amber-500 selection:text-slate-950">
       
-      {/* Floating Cart Button */}
       <button 
         onClick={() => setCartOpen(true)}
         className="fixed bottom-24 right-6 z-40 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all"
@@ -270,7 +236,6 @@ export default function Catalog() {
           <p className="text-slate-400 text-base">Explore premium custom denim and traditional structural designs crafted for individual dimensions.</p>
         </AnimatedElement>
 
-        {/* Dashboard Filter Console */}
         <div className="flex flex-col mb-10 border border-slate-800 p-4 rounded-2xl bg-[#16253D] shadow-2xl">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="relative w-full md:w-96">
@@ -278,13 +243,12 @@ export default function Catalog() {
               <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search jeans, jackets, native attires..." className="pl-10 bg-[#0F1E36] border-slate-700 text-white placeholder-slate-500 rounded-xl h-11" />
             </div>
             
-            {/* Primary Categories Layout: Cleaned text states from becoming dim or turning invisible */}
             <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
               {["DENIM", "NATIVE", "CORPORATE"].map(c => (
                 <Button 
                   key={c} 
                   type="button"
-                  onClick={() => handleCategoryChange(c)} 
+                  onClick={() => { setSelectedCategory(c); setSelectedSubcategory("ALL"); }} 
                   className={`rounded-xl font-black text-xs tracking-wider h-11 px-5 shadow transition-all ${
                     selectedCategory === c 
                       ? "bg-amber-500 text-slate-950 hover:bg-amber-500 opacity-100" 
@@ -308,7 +272,6 @@ export default function Catalog() {
             </Select>
           </div>
 
-          {/* Subcategory View: Now with 'ALL' inside and containing 'Jalabia' for Natives */}
           {CATEGORY_MAP[selectedCategory]?.length > 0 && (
             <div className="flex gap-2 w-full overflow-x-auto pt-3 pb-1 border-t border-slate-800 mt-4">
               {CATEGORY_MAP[selectedCategory].map(sub => (
@@ -343,11 +306,9 @@ export default function Catalog() {
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
             {filtered.map((product, idx) => (
               <AnimatedElement key={product.id} delay={idx * 80} className="group bg-white rounded-2xl overflow-hidden shadow-xl border border-slate-200 flex flex-col h-full transition-all hover:-translate-y-1">
-                {/* Clicking image triggers zoom view context assessment */}
                 <div 
                   onClick={() => { setLightboxImage(product.image_url); setZoomScale(1); setPanOffset({ x: 0, y: 0 }); }}
                   className="relative aspect-[3/4] bg-slate-100 overflow-hidden cursor-zoom-in"
-                  title="Click to zoom image view"
                 >
                   <img src={product.image_url} alt={product.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                   
@@ -392,11 +353,9 @@ export default function Catalog() {
                         <Button className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl h-9 px-4 transition-all whitespace-nowrap">Quick View</Button>
                       </DialogTrigger>
             
-                      {/* Fixed layout: Adjusted template gaps to eliminate empty layout spaces on desktop views */}
                       <DialogContent className="bg-[#111F38] border-slate-800 max-w-4xl w-[95vw] h-[90vh] sm:h-[85vh] flex flex-col p-0 overflow-hidden text-white">
                         {selectedProduct && (
                           <div className="flex-1 flex flex-col md:flex-row overflow-hidden h-full">
-                            {/* Height settings optimized to maximize asset coverage and close layout gaps */}
                             <div className="w-full md:w-1/2 bg-slate-950 relative flex-shrink-0 h-64 md:h-full">
                               <img src={selectedProduct.image_url} alt={selectedProduct.name} className="w-full h-full object-cover object-top" />
                             </div>
@@ -441,22 +400,24 @@ export default function Catalog() {
                                         <button type="button" onClick={() => setQty(p => p + 1)} className="w-8 h-8 hover:bg-slate-800 rounded-lg font-bold text-lg">+</button>
                                       </div>
                                     </div>
+
                                     <div className="space-y-1.5">
                                       <Label className="text-xs font-bold uppercase text-slate-400">Affiliate Code (Optional)</Label>
-                                      <Input value={affiliateCode} onChange={e => setAffiliateCode(e.target.value.toUpperCase())} placeholder="e.g. PARTNER10" className="bg-[#091324] border-slate-700 rounded-xl h-10 text-sm text-white placeholder-slate-600" />
-                                      {localStorage.getItem("dkadris_affiliate_ref") && (
+                                      <Input 
+                                        value={affiliateCode} 
+                                        onChange={e => {
+                                          const val = e.target.value.toUpperCase();
+                                          setAffiliateCode(val);
+                                          if (val) localStorage.setItem("dkadris_affiliate_ref", val);
+                                        }} 
+                                        placeholder="e.g. PARTNER10" 
+                                        className="bg-[#091324] border-slate-700 rounded-xl h-10 text-sm text-white placeholder-slate-600" 
+                                      />
+                                      {affiliateCode && (
                                         <p className="text-[11px] text-emerald-400 font-semibold mt-1 flex items-center gap-1">
-                                          <Check className="h-3 w-3 stroke-[3]" /> Referral code auto-applied from session memory.
+                                          <Check className="h-3 w-3 stroke-[3]" /> Affiliate code "{affiliateCode}" will be linked to this order.
                                         </p>
                                       )}
-                                    </div>
-
-                                    <div className="mt-4 space-y-3 border-t border-slate-800/80 pt-4">
-                                      <h4 className="text-[11px] uppercase font-bold tracking-wider text-amber-400">Garment Blueprint Manual</h4>
-                                      <div className="text-slate-400 text-xs leading-relaxed space-y-2">
-                                        <p><span className="text-slate-300 font-medium">Description:</span> {selectedProduct.description || "Premium tailor-crafted bespoke garment collection blueprint."}</p>
-                                        <p><span className="text-slate-300 font-medium">Fabric Type:</span> {selectedProduct.fabric_details || "Authentic heavy-duty raw denim composition weave."}</p>
-                                      </div>
                                     </div>
                                   </TabsContent>
 
@@ -507,10 +468,9 @@ export default function Catalog() {
                                 </Tabs>
                               </div>
 
-                              {/* Form submit/action buttons stay pinned to the bottom of the modal container */}
                               <div className="pt-4 border-t border-slate-800 mt-6">
                                 {activeTab === "ready" ? (
-                                  <Button onClick={handleProceedToBespoke} disabled={!chosenSize || !chosenColor} className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-5 rounded-xl text-xs tracking-widest uppercase shadow-lg">Add & Continue to Bespoke Fitting</Button>
+                                  <Button onClick={() => setActiveTab("custom")} disabled={!chosenSize || !chosenColor} className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-5 rounded-xl text-xs tracking-widest uppercase shadow-lg">Add & Continue to Bespoke Fitting</Button>
                                 ) : (
                                   !orderDone && (
                                     <>
@@ -558,6 +518,7 @@ export default function Catalog() {
                       <div className="flex-1">
                         <h4 className="font-bold text-sm text-white line-clamp-1">{item.name}</h4>
                         <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Size: {item.size} | Color: {item.color} | Qty: {item.qty}</p>
+                        {item.affiliateCode && <span className="text-[10px] text-amber-400 font-bold block mt-0.5">Ref: {item.affiliateCode}</span>}
                         <span className="text-amber-400 font-extrabold text-sm block mt-1">₦{((item.price || 0) * item.qty).toLocaleString()}</span>
                       </div>
                       <button onClick={() => setCartItems(p => p.filter((_, j) => j !== i))} className="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-red-900/60 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center transition-all">
@@ -576,13 +537,15 @@ export default function Catalog() {
                   </div>
                   
                   <a 
-                    onClick={triggerCartExpiryCountdown}
                     href={`https://wa.me/2348163914835?text=${encodeURIComponent(
                       `*D-KADRIS BESPOKE ORDER*\n----------------------------------\n\n` +
                       cartItems.map(item => {
                         let block = `👕 *Garment:* ${item.name}\n🎨 *Finish:* ${item.color} | *Size:* ${item.size} | *Qty:* ${item.qty}\n`;
                         if (item.isCustom && item.measurements) {
                           block += `👤 *Client:* ${item.measurements.client}\n📞 *Phone:* ${item.measurements.phone}\n⚙️ *Fit Mapping:* ${item.fitPreference}\n`;
+                        }
+                        if (item.affiliateCode) {
+                          block += `🎟️ *Ref Code:* ${item.affiliateCode}\n`;
                         }
                         return block;
                       }).join("\n----------------------------------\n\n") +
@@ -600,81 +563,7 @@ export default function Catalog() {
             </div>
           </div>
         )}
-
-        {/* Global Floating Direct Chat */}
-        <a href="https://wa.me/2348163914835" target="_blank" rel="noopener noreferrer" className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all">
-          <MessageCircle className="h-6 w-6 fill-white text-emerald-500" />
-        </a>
       </div>
-
-      {/* Persistent Cross-Platform Image Assessment Zoom Lightbox */}
-      <AnimatePresence>
-        {lightboxImage && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-slate-950/95 flex flex-col justify-between items-center p-4 select-none touch-none"
-          >
-            {/* Header Control Panel Bar */}
-            <div className="w-full max-w-5xl flex items-center justify-between text-white z-10 pt-2">
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                Zoom Mode ({Math.round(zoomScale * 100)}%) — Drag to Assess
-              </span>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setZoomScale(prev => Math.max(1, prev - 0.5))}
-                  className="p-2.5 bg-slate-900/80 border border-slate-800 rounded-xl text-white hover:bg-slate-800 transition-colors"
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="h-5 w-5" />
-                </button>
-                <button 
-                  onClick={() => setZoomScale(prev => Math.min(4, prev + 0.5))}
-                  className="p-2.5 bg-slate-900/80 border border-slate-800 rounded-xl text-white hover:bg-slate-800 transition-colors"
-                  title="Zoom In"
-                >
-                  <ZoomIn className="h-5 w-5" />
-                </button>
-                <button 
-                  onClick={() => setLightboxImage(null)}
-                  className="p-2.5 bg-amber-500 rounded-xl text-slate-950 font-black hover:bg-amber-600 transition-colors ml-2"
-                  title="Close Preview"
-                >
-                  <X className="h-5 w-5 stroke-[2.5]" />
-                </button>
-              </div>
-            </div>
-
-            {/* Immersive Viewport Canvas */}
-            <div 
-              className="flex-1 w-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerLeave={handlePointerUp}
-            >
-              <motion.img 
-                src={lightboxImage} 
-                alt="High definition zoom inspection view" 
-                draggable={false}
-                animate={{
-                  scale: zoomScale,
-                  x: zoomScale > 1 ? panOffset.x : 0,
-                  y: zoomScale > 1 ? panOffset.y : 0
-                }}
-                transition={isDragging ? { type: "just" } : { type: "spring", stiffness: 300, damping: 30 }}
-                className="max-w-full max-h-[75vh] md:max-h-[80vh] object-contain rounded-lg shadow-2xl pointer-events-none"
-              />
-            </div>
-
-            {/* Footer Guidance Context Prompt */}
-            <div className="text-center text-slate-500 text-xs font-medium pb-2">
-              Tip: Use top buttons to adjust view. Drag or slide fabric texture panels to evaluate styling parameters.
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
-}
+                        }
