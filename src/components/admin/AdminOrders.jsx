@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase"; 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, Eye, ShoppingBag, Check } from "lucide-react";
 
@@ -30,81 +29,74 @@ export default function AdminOrders() {
     } catch (err) {
       console.error("Error loading orders:", err.message);
     } finally {
+      // Tab to edit
+    } {
       setLoading(false);
     }
   };
 
   useEffect(() => { load(); }, []);
 
-  // Centralized workflow handler for state switches
   const updateStatus = async (id, targetStatus, orderContext) => {
     setUpdating(true);
     try {
-      // 1. Update order status step
-      const { error: statusError } = await supabase
+      const isConfirming = (targetStatus === "confirmed" || targetStatus === "processing") && 
+                           orderContext?.status !== "confirmed" && 
+                           orderContext?.status !== "processing";
+
+      // 1. Update order status in Supabase
+      const { error } = await supabase
         .from("orders")
         .update({ status: targetStatus })
         .eq("id", id);
 
-      if (statusError) throw statusError;
+      if (error) throw error;
 
-      // 2. Automate Affiliate Commissions (10%) on 'confirmed' or 'processing'
-      if ((targetStatus === "confirmed" || targetStatus === "processing") && orderContext?.affiliate_code) {
-        const affCode = orderContext.affiliate_code;
+      // Extract referral code from root order property OR from nested item array
+      const extractedCode = orderContext?.affiliate_code || 
+                            (Array.isArray(orderContext?.items) && orderContext.items[0]?.affiliateCode);
 
-        // Prevent duplicate commission entries for the same order
-        const { data: existingTx } = await supabase
-          .from("affiliate_transactions")
-          .select("id")
-          .eq("order_id", id)
+      if (isConfirming && extractedCode) {
+        const orderValue = orderContext.total_amount || orderContext.total || 0;
+        const payoutSum = Number(orderValue) * 0.10; // 10% Commission
+        const cleanCode = extractedCode.trim().toUpperCase();
+
+        // 2. Insert transaction ledger entry
+        await supabase.from("affiliate_transactions").insert([{
+          code: cleanCode,
+          amount: payoutSum,
+          type: "credit",
+          order_id: id,
+          created_at: new Date().toISOString()
+        }]);
+
+        // 3. Find target affiliate using flexible case-insensitive match (.ilike)
+        const { data: affiliate, error: affErr } = await supabase
+          .from("affiliates")
+          .select("id, orders_generated, total_earnings, pending_payout, referral_code")
+          .ilike("referral_code", cleanCode)
           .maybeSingle();
 
-        if (!existingTx) {
-          const orderValue = Number(orderContext.total_amount || orderContext.total || 0);
-          const payoutSum = orderValue * 0.10;
+        if (affErr) console.error("Error finding affiliate:", affErr.message);
 
-          // Locate affiliate account by matching 'referral_code'
-          const { data: affiliate, error: affErr } = await supabase
+        // 4. Directly update affiliate earnings to reflect immediately on their UI
+        if (affiliate) {
+          const { error: updateErr } = await supabase
             .from("affiliates")
-            .select("*")
-            .eq("referral_code", affCode)
-            .maybeSingle();
+            .update({
+              orders_generated: (Number(affiliate.orders_generated) || 0) + 1,
+              total_earnings: (Number(affiliate.total_earnings) || 0) + payoutSum,
+              pending_payout: (Number(affiliate.pending_payout) || 0) + payoutSum,
+            })
+            .eq("id", affiliate.id);
 
-          if (affErr) {
-            console.error("Error querying affiliates:", affErr.message);
-          } else if (affiliate) {
-            // A. Record transaction in affiliate_transactions
-            await supabase.from("affiliate_transactions").insert([{
-              affiliate_id: affiliate.id,
-              code: affCode,
-              amount: payoutSum,
-              type: "credit",
-              order_id: id,
-              created_at: new Date().toISOString()
-            }]);
-
-            // B. Update pending payout and total earnings in affiliates table
-            const currentPending = Number(affiliate.pending_payout || 0);
-            const currentTotal = Number(affiliate.total_earnings || 0);
-
-            const { error: updateErr } = await supabase
-              .from("affiliates")
-              .update({ 
-                pending_payout: currentPending + payoutSum,
-                total_earnings: currentTotal + payoutSum 
-              })
-              .eq("id", affiliate.id);
-
-            if (updateErr) {
-              console.error("Error updating affiliate metrics:", updateErr.message);
-            } else {
-              // C. Mark commission as released on the order record
-              await supabase
-                .from("orders")
-                .update({ commission_released: true })
-                .eq("id", id);
-            }
+          if (updateErr) {
+            console.error("Error updating affiliate metrics:", updateErr.message);
+          } else {
+            alert(`✅ Order Confirmed! ₦${payoutSum.toLocaleString()} commission credited to code "${cleanCode}".`);
           }
+        } else {
+          alert(`⚠️ Order confirmed, but no active affiliate was found matching code "${cleanCode}".`);
         }
       }
 
@@ -198,8 +190,11 @@ export default function AdminOrders() {
                 <div><p className="text-muted-foreground text-xs uppercase tracking-wide">Email Address</p><p className="text-card-foreground font-medium mt-0.5">{selected.customer_email}</p></div>
                 <div><p className="text-muted-foreground text-xs uppercase tracking-wide">Phone Number</p><p className="text-card-foreground font-medium mt-0.5">{selected.customer_phone || "—"}</p></div>
                 <div><p className="text-muted-foreground text-xs uppercase tracking-wide">Order Date</p><p className="text-card-foreground font-medium mt-0.5">{selected.created_at ? new Date(selected.created_at).toLocaleDateString() : "—"}</p></div>
-                {selected.affiliate_code && (
-                  <div className="col-span-2"><p className="text-muted-foreground text-xs uppercase tracking-wide">Affiliate Partner Applied</p><p className="text-amber-500 font-bold mt-0.5">{selected.affiliate_code}</p></div>
+                {(selected.affiliate_code || (Array.isArray(selected.items) && selected.items[0]?.affiliateCode)) && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground text-xs uppercase tracking-wide">Affiliate Partner Applied</p>
+                    <p className="text-amber-500 font-bold mt-0.5">{selected.affiliate_code || selected.items[0]?.affiliateCode}</p>
+                  </div>
                 )}
               </div>
 
@@ -231,7 +226,7 @@ export default function AdminOrders() {
                     </button>
                   ))}
                 </div>
-                <p className="text-muted-foreground text-[11px] mt-2">💡 Selecting 'confirmed' or 'processing' automatically credits affiliate commission and updates earnings.</p>
+                <p className="text-muted-foreground text-[11px] mt-2">💡 Selecting 'confirmed' or 'processing' verifies payment and automatically credits 10% commission to the partner account.</p>
               </div>
             </div>
           )}
@@ -239,4 +234,4 @@ export default function AdminOrders() {
       </Dialog>
     </div>
   );
-}
+                  }
