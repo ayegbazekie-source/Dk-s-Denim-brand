@@ -9,7 +9,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Heart, MessageCircle, Package, X, Check, ShoppingBag, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { Search, Heart, MessageCircle, Package, X, Check, ShoppingBag, ZoomIn, ZoomOut, Maximize2, ExternalLink, RefreshCw } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 
@@ -17,7 +17,7 @@ const CATEGORY_MAP = {
   DENIM: ["ALL", "Jackets", "Jeans", "Cargo", "Shorts", "Jumpsuits"],
   NATIVE: ["ALL", "Senators", "Kaftans", "Jalabia", "Caps"],
   CORPORATE: ["ALL", "Trousers", "Shirts"],
-  PREMIUM: ["ALL"]
+  PREMIUM: ["ALL", "Suits", "Bespoke Jackets"]
 };
 
 const AnimatedElement = ({ children, className, delay = 0 }) => {
@@ -50,6 +50,7 @@ export default function Catalog() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeTab, setActiveTab] = useState("ready");
   
+  // Lightbox & 4x Magnification states
   const [lightboxImage, setLightboxImage] = useState(null);
   const [zoomScale, setZoomScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -88,6 +89,30 @@ export default function Catalog() {
     return localStorage.getItem("dkadris_affiliate_ref") || "";
   });
 
+  // Intercept browser back button when any modal, drawer, or lightbox is open
+  useEffect(() => {
+    const handlePopState = () => {
+      if (lightboxImage) {
+        setLightboxImage(null);
+        setZoomScale(1);
+        setPanOffset({ x: 0, y: 0 });
+      } else if (cartOpen) {
+        setCartOpen(false);
+      } else if (selectedProduct) {
+        setSelectedProduct(null);
+      }
+    };
+
+    if (cartOpen || selectedProduct || lightboxImage) {
+      window.history.pushState({ modalOpen: true }, "");
+      window.addEventListener("popstate", handlePopState);
+    }
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [cartOpen, selectedProduct, lightboxImage]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const refParam = params.get("ref");
@@ -118,32 +143,12 @@ export default function Catalog() {
     fetchProducts();
   }, []);
 
-  const handlePointerDown = (e) => {
-    if (zoomScale === 1) return;
-    setIsDragging(true);
-    dragStart.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
-  };
-
-  const handlePointerMove = (e) => {
-    if (!isDragging) return;
-    setPanOffset({
-      x: e.clientX - dragStart.current.x,
-      y: e.clientY - dragStart.current.y
-    });
-  };
-
-  const handlePointerUp = () => {
-    setIsDragging(false);
-  };
-
   const handleCustomOrderSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setDbSubmitting(true);
     setDbError(null); 
     
     const calculatedTotal = (selectedProduct?.price || 0) * qty;
-    
-    // Always fetch active referral code from state or fallback directly to local storage
     const activeRefCode = affiliateCode || localStorage.getItem("dkadris_affiliate_ref") || "";
     const cleanAffiliateCode = activeRefCode ? activeRefCode.trim().toUpperCase() : null;
 
@@ -168,7 +173,6 @@ export default function Catalog() {
     };
 
     try {
-      // Explicitly pass affiliate_code into the root column of Supabase 'orders' table
       const { error } = await supabase.from("orders").insert([
         {
           customer_name: custName,
@@ -193,6 +197,14 @@ export default function Catalog() {
       setCustName(""); setCustPhone(""); setCustEmail(""); setCustomNotes("");
       setShoulder(""); setChest(""); setSleeve(""); setTopLength(""); setWaist(""); setThigh("");
       setJeansLength(""); setChosenSize(""); setChosenColor(""); setQty(1);
+
+      // 3-Minute Timeout (180,000 ms) after successful checkout submit
+      setTimeout(() => {
+        setOrderDone(false);
+        setSelectedProduct(null);
+        setCartOpen(true);
+      }, 180000);
+
     } catch (err) {
       console.error("Database error:", err.message);
       setDbError(err.message || "Failed to sync order.");
@@ -202,6 +214,41 @@ export default function Catalog() {
   };
 
   const toggleFav = (id) => setFavorites(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+
+  const openProductFromCart = (itemId) => {
+    const targetProduct = products.find(p => p.id === itemId);
+    if (targetProduct) {
+      setCartOpen(false);
+      setSelectedProduct(targetProduct);
+      setActiveTab("ready");
+    }
+  };
+
+  // Zoom Control Handlers
+  const handleZoomIn = () => setZoomScale(prev => Math.min(prev + 0.75, 4));
+  const handleZoomOut = () => {
+    setZoomScale(prev => {
+      const next = Math.max(prev - 0.75, 1);
+      if (next === 1) setPanOffset({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const handleMouseDown = (e) => {
+    if (zoomScale <= 1) return;
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || zoomScale <= 1) return;
+    setPanOffset({
+      x: e.clientX - dragStart.current.x,
+      y: e.clientY - dragStart.current.y
+    });
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
 
   const filtered = products.filter(p => {
     const matchS = p.name?.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase());
@@ -216,6 +263,7 @@ export default function Catalog() {
   return (
     <div className="bg-[#0F1E36] text-white min-h-screen pt-24 pb-16 px-4 sm:px-6 relative selection:bg-amber-500 selection:text-slate-950">
       
+      {/* Quick Access Cart Floating Button */}
       <button 
         onClick={() => setCartOpen(true)}
         className="fixed bottom-24 right-6 z-40 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all"
@@ -245,7 +293,7 @@ export default function Catalog() {
             </div>
             
             <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-              {["DENIM", "NATIVE", "CORPORATE"].map(c => (
+              {Object.keys(CATEGORY_MAP).map(c => (
                 <Button 
                   key={c} 
                   type="button"
@@ -427,7 +475,8 @@ export default function Catalog() {
                                       <div className="text-center py-8 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex flex-col items-center justify-center">
                                         <div className="w-12 h-12 bg-amber-500 text-slate-950 rounded-full flex items-center justify-center mb-3"><Check className="h-6 w-6 stroke-[3]" /></div>
                                         <h4 className="font-bold text-lg text-white mb-1">Order Submitted Successfully!</h4>
-                                        <p className="text-amber-400 text-xs font-black max-w-xs px-4 mb-5 uppercase tracking-wider">Go to your cart bag to checkout via WhatsApp!</p>
+                                        <p className="text-amber-400 text-xs font-black max-w-xs px-4 mb-2 uppercase tracking-wider">Go to your cart bag to checkout via WhatsApp!</p>
+                                        <p className="text-slate-400 text-[11px] mb-5">Modal will auto-redirect to your cart in 3 minutes.</p>
                                         <Button onClick={() => { setSelectedProduct(null); setCartOpen(true); }} className="bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs rounded-xl px-6 py-2.5">Open Cart Bag</Button>
                                       </div>
                                     ) : (
@@ -495,6 +544,72 @@ export default function Catalog() {
           </div>
         )}
 
+        {/* Full Screen Magnification & Lightbox Viewer (Up to 4X Zoom) */}
+        <AnimatePresence>
+          {lightboxImage && (
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-between p-4 sm:p-6"
+            >
+              <div className="w-full flex justify-between items-center z-20">
+                <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-400">
+                  <Maximize2 className="h-4 w-4" /> Magnification: {zoomScale.toFixed(1)}x / 4.0x
+                </div>
+                <button 
+                  onClick={() => { setLightboxImage(null); setZoomScale(1); setPanOffset({ x: 0, y: 0 }); }}
+                  className="w-10 h-10 rounded-full bg-slate-800/90 text-white hover:bg-slate-700 flex items-center justify-center border border-slate-700 transition-colors shadow-lg"
+                >
+                  <X className="h-5 w-5 stroke-[2.5]" />
+                </button>
+              </div>
+
+              <div 
+                className="relative flex-1 w-full max-w-4xl flex items-center justify-center overflow-hidden my-4 cursor-grab active:cursor-grabbing select-none"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              >
+                <img 
+                  src={lightboxImage} 
+                  alt="Full Zoom View" 
+                  style={{
+                    transform: `scale(${zoomScale}) translate(${panOffset.x / zoomScale}px, ${panOffset.y / zoomScale}px)`,
+                    transition: isDragging ? "none" : "transform 0.2s ease-out"
+                  }}
+                  className="max-h-[75vh] max-w-full object-contain pointer-events-none rounded-lg shadow-2xl" 
+                />
+              </div>
+
+              <div className="flex items-center gap-3 bg-slate-900/90 border border-slate-800 p-2 rounded-2xl shadow-2xl z-20">
+                <Button 
+                  onClick={handleZoomOut} 
+                  disabled={zoomScale <= 1} 
+                  className="bg-slate-800 hover:bg-slate-700 text-white rounded-xl h-10 px-4 flex items-center gap-2 font-bold text-xs"
+                >
+                  <ZoomOut className="h-4 w-4" /> Zoom Out
+                </Button>
+                <Button 
+                  onClick={() => { setZoomScale(1); setPanOffset({ x: 0, y: 0 }); }} 
+                  disabled={zoomScale === 1} 
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl h-10 px-3 flex items-center gap-1 font-bold text-xs"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Reset
+                </Button>
+                <Button 
+                  onClick={handleZoomIn} 
+                  disabled={zoomScale >= 4} 
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl h-10 px-4 flex items-center gap-2 font-black text-xs"
+                >
+                  <ZoomIn className="h-4 w-4" /> Zoom In (4x Max)
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Global Cart Sidebar Drawer */}
         {cartOpen && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
@@ -517,7 +632,17 @@ export default function Catalog() {
                     <div key={i} className="flex gap-4 border border-slate-800 p-3.5 rounded-xl bg-[#091324] items-center shadow-inner">
                       <img src={item.img} alt={item.name} className="w-16 h-20 object-cover rounded-lg bg-slate-950 flex-shrink-0" />
                       <div className="flex-1">
-                        <h4 className="font-bold text-sm text-white line-clamp-1">{item.name}</h4>
+                        <div className="flex items-center justify-between gap-1">
+                          <h4 className="font-bold text-sm text-white line-clamp-1">{item.name}</h4>
+                          {item.id && (
+                            <button 
+                              onClick={() => openProductFromCart(item.id)}
+                              className="text-amber-400 hover:text-amber-300 text-[11px] font-bold flex items-center gap-0.5 underline shrink-0"
+                            >
+                              View <ExternalLink className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
                         <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Size: {item.size} | Color: {item.color} | Qty: {item.qty}</p>
                         {item.affiliateCode && <span className="text-[10px] text-amber-400 font-bold block mt-0.5">Ref: {item.affiliateCode}</span>}
                         <span className="text-amber-400 font-extrabold text-sm block mt-1">₦{((item.price || 0) * item.qty).toLocaleString()}</span>
@@ -543,7 +668,7 @@ export default function Catalog() {
   cartItems.map(item => {
     let block = `👕 *Garment:* ${item.name}\n🎨 *Finish:* ${item.color} | *Size:* ${item.size} | *Qty:* ${item.qty}\n`;
     if (item.isCustom && item.measurements) {
-      block += `👤 *Client:* ${item.measurements.client}\n📞 *Phone:* ${item.measurements.phone}\n⚙️ *Fit Mapping:* ${item.fitPreference}\n`;
+      block += `👤 *Client:* ${item.measurements.client}\n📞 *Phone:* ${item.measurements.phone}\n⚙️ *Fit Mapping:* ${item.fitPreference || item.color}\n`;
     }
     if (item.affiliateCode) {
       block += `🏷️ *Ref Code:* ${item.affiliateCode}\n`;
@@ -552,8 +677,7 @@ export default function Catalog() {
   }).join('\n-----------------------------------\n\n') +
   `\n💰 *Total Gross:* ₦${cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}`
 )}`}
- 
-                    target="_blank" 
+    target="_blank" 
                     rel="noopener noreferrer"
                   >
                     <Button className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl py-6 tracking-widest uppercase text-xs shadow-xl transition-all">
@@ -568,4 +692,4 @@ export default function Catalog() {
       </div>
     </div>
   );
-                        }
+}
