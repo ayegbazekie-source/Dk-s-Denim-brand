@@ -226,8 +226,4 @@ export default function AdminOrders() {
       </Dialog>
     </div>
   );
-}
-log>
-    </div>
-  );
-                      }
+      }
