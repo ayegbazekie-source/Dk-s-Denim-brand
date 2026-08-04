@@ -40,7 +40,7 @@ export default function AdminOrders() {
   const updateStatus = async (id, targetStatus, orderContext) => {
     setUpdating(true);
     try {
-      // 1. Update order status step
+      // 1. Update order status step (This automatically triggers your Brevo email from the database!)
       const { error } = await supabase
         .from("orders")
         .update({ status: targetStatus })
@@ -48,51 +48,18 @@ export default function AdminOrders() {
 
       if (error) throw error;
 
-      // 2. Automate Affiliate Commissions (10%) on 'confirmed' OR 'processing'
-      if ((targetStatus === "confirmed" || targetStatus === "processing") && orderContext?.affiliate_code) {
-        
-        // Prevent duplicate commission entries for the same order
-        const { data: existingTx } = await supabase
-          .from("affiliate_transactions")
-          .select("id")
-          .eq("order_id", id)
-          .maybeSingle();
+      // 2. Automate Affiliate Commissions (10%) on 'Processing'
+      if (targetStatus === "processing" && orderContext?.affiliate_code) {
+        const orderValue = orderContext.total_amount || orderContext.total || 0;
+        const payoutSum = orderValue * 0.10;
 
-        if (!existingTx) {
-          const orderValue = Number(orderContext.total_amount || orderContext.total || 0);
-          const payoutSum = orderValue * 0.10;
-
-          // Locate affiliate account
-          const { data: affiliate } = await supabase
-            .from("affiliates")
-            .select("id, balance, total_earnings")
-            .eq("code", orderContext.affiliate_code)
-            .maybeSingle();
-
-          if (affiliate) {
-            // A. Record transaction history
-            await supabase.from("affiliate_transactions").insert([{
-              affiliate_id: affiliate.id,
-              code: orderContext.affiliate_code,
-              amount: payoutSum,
-              type: "credit",
-              order_id: id,
-              created_at: new Date().toISOString()
-            }]);
-
-            // B. Update affiliate active balance and earnings
-            const newBalance = Number(affiliate.balance || 0) + payoutSum;
-            const newTotalEarnings = Number(affiliate.total_earnings || 0) + payoutSum;
-
-            await supabase
-              .from("affiliates")
-              .update({ 
-                balance: newBalance,
-                total_earnings: newTotalEarnings 
-              })
-              .eq("id", affiliate.id);
-          }
-        }
+        await supabase.from("affiliate_transactions").insert([{
+          code: orderContext.affiliate_code,
+          amount: payoutSum,
+          type: "credit",
+          order_id: id,
+          created_at: new Date().toISOString()
+        }]);
       }
 
       if (selected?.id === id) {
@@ -218,7 +185,7 @@ export default function AdminOrders() {
                     </button>
                   ))}
                 </div>
-                <p className="text-muted-foreground text-[11px] mt-2">💡 Selecting 'confirmed' or 'processing' automatically updates the affiliate's balance and transaction history.</p>
+                <p className="text-muted-foreground text-[11px] mt-2">💡 Selecting 'processing' or 'delivered' automatically drafts and transmits the client confirmation emails via Brevo setup.</p>
               </div>
             </div>
           )}
@@ -226,4 +193,4 @@ export default function AdminOrders() {
       </Dialog>
     </div>
   );
-                }
+                      }
