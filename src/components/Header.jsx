@@ -41,14 +41,19 @@ export default function Header() {
     fetchLogoSettings();
   }, []);
 
-  // UPDATED LABELS AND PATHS TO ELIMINATE AFFILIATE PHRASING
+  // UPDATED LABELS AND LOWERCASE PATHS FOR CLEAN ROUTE ANALYTICS
   const navLinks = [
     { label: "HOME", to: "/" },
-    { label: "SHOP", to: "/Catalog" },
-    { label: "EARN WITH US", to: "/affiliate" },
+    { label: "SHOP", to: "/catalog" },
+    { label: "EARN WITH US", to: "/earn" },
   ];
 
-  const isActive = (to) => location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
+  // Case-insensitive active route helper
+  const isActive = (to) => {
+    const currentPath = location.pathname.toLowerCase();
+    const targetPath = to.toLowerCase();
+    return currentPath === targetPath || (targetPath !== "/" && currentPath.startsWith(targetPath));
+  };
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? "bg-background/95 backdrop-blur-xl shadow-2xl shadow-background/50 border-b border-border/50 py-2.5" : "bg-transparent py-4"}`}>
