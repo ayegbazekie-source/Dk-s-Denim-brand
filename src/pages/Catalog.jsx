@@ -64,7 +64,7 @@ export default function Catalog() {
   const [selectedSubcategory, setSelectedSubcategory] = useState("ALL");
   const [sortBy, setSortBy] = useState("DEFAULT");
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState("ready");
   
   // Lightbox & Magnification states
   const [lightboxImage, setLightboxImage] = useState(null);
@@ -235,11 +235,11 @@ export default function Catalog() {
     if (targetProduct) {
       setCartOpen(false);
       setSelectedProduct(targetProduct);
-      setActiveTab("details");
+      setActiveTab("ready");
     }
   };
 
-  // Zoom Handlers
+  // Zoom & Drag Handlers (Mouse + Touch)
   const handleZoomIn = () => setZoomScale(prev => Math.min(prev + 0.75, 4));
   const handleZoomOut = () => {
     setZoomScale(prev => {
@@ -249,21 +249,21 @@ export default function Catalog() {
     });
   };
 
-  const handleMouseDown = (e) => {
+  const handleStartDrag = (clientX, clientY) => {
     if (zoomScale <= 1) return;
     setIsDragging(true);
-    dragStart.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+    dragStart.current = { x: clientX - panOffset.x, y: clientY - panOffset.y };
   };
 
-  const handleMouseMove = (e) => {
+  const handleMoveDrag = (clientX, clientY) => {
     if (!isDragging || zoomScale <= 1) return;
     setPanOffset({
-      x: e.clientX - dragStart.current.x,
-      y: e.clientY - dragStart.current.y
+      x: clientX - dragStart.current.x,
+      y: clientY - dragStart.current.y
     });
   };
 
-  const handleMouseUp = () => setIsDragging(false);
+  const handleEndDrag = () => setIsDragging(false);
 
   const filtered = products.filter(p => {
     const matchS = p.name?.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase());
@@ -368,7 +368,6 @@ export default function Catalog() {
             <p className="text-slate-400 text-xs">No garments matched your filtering parameters.</p>
           </div>
         ) : (
-          /* REDUCED PRODUCT CARD GRID FOR DESKTOP (lg:grid-cols-4 xl:grid-cols-5) */
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
             {filtered.map((product, idx) => (
               <AnimatedElement key={product.id} delay={idx * 50} className="group bg-white rounded-xl overflow-hidden shadow-lg border border-slate-200 flex flex-col h-full transition-all hover:-translate-y-1">
@@ -413,7 +412,7 @@ export default function Catalog() {
                       if (isOpen) { 
                         setSelectedProduct(product); 
                         setOrderDone(false); 
-                        setActiveTab("details");
+                        setActiveTab("ready");
                         setAffiliateCode(localStorage.getItem("dkadris_affiliate_ref") || "");
                       } else { 
                         setSelectedProduct(null); 
@@ -446,45 +445,12 @@ export default function Catalog() {
                                 </DialogHeader>
 
                                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                                  <TabsList className="grid grid-cols-3 w-full bg-[#091324] border border-slate-800 rounded-xl p-1 mb-4">
-                                    <TabsTrigger value="details" className="rounded-lg font-bold text-[10px] uppercase">Details</TabsTrigger>
-                                    <TabsTrigger value="ready" className="rounded-lg font-bold text-[10px] uppercase">Options</TabsTrigger>
-                                    <TabsTrigger value="custom" className="rounded-lg font-bold text-[10px] uppercase">Bespoke Fit</TabsTrigger>
+                                  <TabsList className="grid grid-cols-2 w-full bg-[#091324] border border-slate-800 rounded-xl p-1 mb-4">
+                                    <TabsTrigger value="ready" className="rounded-lg font-bold text-[10px] uppercase">1. Base Selection</TabsTrigger>
+                                    <TabsTrigger value="custom" className="rounded-lg font-bold text-[10px] uppercase">2. Bespoke Details</TabsTrigger>
                                   </TabsList>
 
-                                  {/* TAB 1: FULL PRODUCT DETAILS & RECOMMENDATIONS */}
-                                  <TabsContent value="details" className="space-y-3">
-                                    <div className="space-y-1">
-                                      <Label className="text-[10px] font-bold uppercase text-amber-400 flex items-center gap-1">
-                                        <Shirt className="h-3 w-3" /> Description & Features
-                                      </Label>
-                                      <p className="text-xs text-slate-300 leading-relaxed bg-[#091324] p-3 rounded-xl border border-slate-800/80">
-                                        {selectedProduct.description || "Masterly crafted piece built with premium structural finish and reinforced stitching."}
-                                      </p>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <Label className="text-[10px] font-bold uppercase text-amber-400 flex items-center gap-1">
-                                        <ShieldCheck className="h-3 w-3" /> Care & Maintenance
-                                      </Label>
-                                      <div className="text-xs text-slate-300 leading-relaxed bg-[#091324] p-3 rounded-xl border border-slate-800/80 space-y-1">
-                                        <p>• {selectedProduct.care_instructions || selectedProduct.care || "Wash inside out in cold water using mild detergent."}</p>
-                                        <p>• Air dry away from direct high heat to preserve denim/fabric structure.</p>
-                                        <p>• Iron on moderate heat on reverse side if needed.</p>
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <Label className="text-[10px] font-bold uppercase text-amber-400 flex items-center gap-1">
-                                        <Sparkles className="h-3 w-3" /> Style Recommendation
-                                      </Label>
-                                      <p className="text-xs text-slate-300 leading-relaxed bg-[#091324] p-3 rounded-xl border border-slate-800/80">
-                                        {selectedProduct.style_tips || selectedProduct.style_recommendation || "Pair with D-Kadris bespoke footwear or crisp raw denim layer for a sharp contemporary silhouette."}
-                                      </p>
-                                    </div>
-                                  </TabsContent>
-
-                                  {/* TAB 2: SELECTION OPTIONS */}
+                                  {/* TAB 1: SELECTION OPTIONS + FULL DETAILS */}
                                   <TabsContent value="ready" className="space-y-4">
                                     <div className="space-y-1.5">
                                       <Label className="text-[10px] font-bold uppercase text-slate-400">Select Size</Label>
@@ -531,9 +497,41 @@ export default function Catalog() {
                                         </p>
                                       )}
                                     </div>
+
+                                    {/* CONSOLIDATED DETAILS BELOW AFFILIATE CODE */}
+                                    <div className="pt-3 border-t border-slate-800/80 space-y-3">
+                                      <div className="space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase text-amber-400 flex items-center gap-1">
+                                          <Shirt className="h-3 w-3" /> Garment Blueprint Manual
+                                        </Label>
+                                        <p className="text-xs text-slate-300 leading-relaxed bg-[#091324] p-3 rounded-xl border border-slate-800/80">
+                                          {selectedProduct.description || "Masterly crafted piece built with premium structural finish and reinforced stitching."}
+                                        </p>
+                                      </div>
+
+                                      <div className="space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase text-amber-400 flex items-center gap-1">
+                                          <ShieldCheck className="h-3 w-3" /> Care & Maintenance
+                                        </Label>
+                                        <div className="text-xs text-slate-300 leading-relaxed bg-[#091324] p-3 rounded-xl border border-slate-800/80 space-y-1">
+                                          <p>• {selectedProduct.care_instructions || selectedProduct.care || "Wash inside out in cold water using mild detergent."}</p>
+                                          <p>• Air dry away from direct high heat to preserve denim/fabric structure.</p>
+                                          <p>• Iron on moderate heat on reverse side if needed.</p>
+                                        </div>
+                                      </div>
+
+                                      <div className="space-y-1">
+                                        <Label className="text-[10px] font-bold uppercase text-amber-400 flex items-center gap-1">
+                                          <Sparkles className="h-3 w-3" /> Style Recommendation
+                                        </Label>
+                                        <p className="text-xs text-slate-300 leading-relaxed bg-[#091324] p-3 rounded-xl border border-slate-800/80">
+                                          {selectedProduct.style_tips || selectedProduct.style_recommendation || "Pair with D-Kadris bespoke footwear or crisp raw denim layer for a sharp contemporary silhouette."}
+                                        </p>
+                                      </div>
+                                    </div>
                                   </TabsContent>
 
-                                  {/* TAB 3: BESPOKE MEASUREMENTS */}
+                                  {/* TAB 2: BESPOKE MEASUREMENTS & CUSTOMER DETAILS */}
                                   <TabsContent value="custom" className="space-y-3">
                                     {orderDone ? (
                                       <div className="text-center py-6 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex flex-col items-center justify-center">
@@ -545,8 +543,19 @@ export default function Catalog() {
                                     ) : (
                                       <div className="space-y-3">
                                         <div className="grid grid-cols-2 gap-2">
-                                          <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-slate-400">Full Name *</Label><Input required value={custName} onChange={e=>setCustName(e.target.value)} placeholder="Client Name" className="bg-[#091324] border-slate-700 rounded-xl h-9 text-xs text-white" /></div>
-                                          <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-slate-400">Phone Number *</Label><Input required value={custPhone} onChange={e=>setCustPhone(e.target.value)} placeholder="0803 xxxx 789" className="bg-[#091324] border-slate-700 rounded-xl h-9 text-xs text-white" /></div>
+                                          <div className="space-y-1">
+                                            <Label className="text-[9px] font-bold uppercase text-slate-400">Full Name *</Label>
+                                            <Input required value={custName} onChange={e=>setCustName(e.target.value)} placeholder="Client Name" className="bg-[#091324] border-slate-700 rounded-xl h-9 text-xs text-white" />
+                                          </div>
+                                          <div className="space-y-1">
+                                            <Label className="text-[9px] font-bold uppercase text-slate-400">Phone Number *</Label>
+                                            <Input required value={custPhone} onChange={e=>setCustPhone(e.target.value)} placeholder="0803 xxxx 789" className="bg-[#091324] border-slate-700 rounded-xl h-9 text-xs text-white" />
+                                          </div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                          <Label className="text-[9px] font-bold uppercase text-slate-400">Email Address *</Label>
+                                          <Input required type="email" value={custEmail} onChange={e=>setCustEmail(e.target.value)} placeholder="client@example.com" className="bg-[#091324] border-slate-700 rounded-xl h-9 text-xs text-white" />
                                         </div>
 
                                         <div className="space-y-1">
@@ -573,7 +582,7 @@ export default function Catalog() {
                                           </div>
                                         </div>
 
-                                        <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-slate-400">Styling Variations</Label><Textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} placeholder="Describe custom cuts or adjustments..." className="bg-[#091324] border-slate-700 rounded-xl text-xs h-12 resize-none text-white" /></div>
+                                        <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-slate-400">Styling Variations</Label><Textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} placeholder="Describe custom cuts, pocket options..." className="bg-[#091324] border-slate-700 rounded-xl text-xs h-12 resize-none text-white" /></div>
                                       </div>
                                     )}
                                   </TabsContent>
@@ -582,21 +591,16 @@ export default function Catalog() {
 
                               {/* Footer Action Buttons */}
                               <div className="pt-3 border-t border-slate-800 mt-4">
-                                {activeTab === "details" && (
-                                  <Button onClick={() => setActiveTab("ready")} className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-4 rounded-xl text-xs tracking-widest uppercase">
-                                    Continue to Options & Sizes
-                                  </Button>
-                                )}
                                 {activeTab === "ready" && (
                                   <Button onClick={() => setActiveTab("custom")} disabled={!chosenSize || !chosenColor} className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-4 rounded-xl text-xs tracking-widest uppercase disabled:opacity-50">
-                                    Proceed to Bespoke Fitting
+                                    Add & Continue to Bespoke Fitting
                                   </Button>
                                 )}
                                 {activeTab === "custom" && !orderDone && (
                                   <>
                                     {dbError && <div className="p-2 bg-red-950/80 border border-red-500 text-red-200 text-xs rounded-xl font-bold mb-2">⚠️ {dbError}</div>}
                                     <Button onClick={handleCustomOrderSubmit} disabled={dbSubmitting} className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-4 rounded-xl text-xs tracking-widest uppercase">
-                                      {dbSubmitting ? "Syncing Admin..." : "Add to Cart Bag"}
+                                      {dbSubmitting ? "Syncing Admin..." : "Order Now"}
                                     </Button>
                                   </>
                                 )}
@@ -613,7 +617,7 @@ export default function Catalog() {
           </div>
         )}
 
-        {/* Magnification Lightbox */}
+        {/* Magnification Lightbox with Touch & Mouse Drag Support */}
         <AnimatePresence>
           {lightboxImage && (
             <motion.div 
@@ -635,11 +639,18 @@ export default function Catalog() {
               </div>
 
               <div 
-                className="relative flex-1 w-full max-w-4xl flex items-center justify-center overflow-hidden my-4 cursor-grab active:cursor-grabbing select-none"
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
+                className="relative flex-1 w-full max-w-4xl flex items-center justify-center overflow-hidden my-4 cursor-grab active:cursor-grabbing select-none touch-none"
+                onMouseDown={(e) => handleStartDrag(e.clientX, e.clientY)}
+                onMouseMove={(e) => handleMoveDrag(e.clientX, e.clientY)}
+                onMouseUp={handleEndDrag}
+                onMouseLeave={handleEndDrag}
+                onTouchStart={(e) => {
+                  if (e.touches.length === 1) handleStartDrag(e.touches[0].clientX, e.touches[0].clientY);
+                }}
+                onTouchMove={(e) => {
+                  if (e.touches.length === 1) handleMoveDrag(e.touches[0].clientX, e.touches[0].clientY);
+                }}
+                onTouchEnd={handleEndDrag}
               >
                 <img 
                   src={lightboxImage} 
@@ -730,7 +741,7 @@ export default function Catalog() {
   cartItems.map(item => {
     let block = `👕 *Garment:* ${item.name}\n💰 *Price:* ₦${(item.price || 0).toLocaleString()} each\n🎨 *Finish:* ${item.color} | *Size:* ${item.size} | *Qty:* ${item.qty}\n💵 *Item Subtotal:* ₦${((item.price || 0) * item.qty).toLocaleString()}\n`;
     if (item.isCustom && item.measurements) {
-      block += `👤 *Client:* ${item.measurements.client}\n📞 *Phone:* ${item.measurements.phone}\n⚙️ *Fit Mapping:* ${item.fitPreference || item.color}\n`;
+      block += `👤 *Client:* ${item.measurements.client}\n📞 *Phone:* ${item.measurements.phone}\n📧 *Email:* ${item.measurements.email}\n⚙️ *Fit Mapping:* ${item.fitPreference || item.color}\n`;
     }
     if (item.affiliateCode) {
       block += `🏷️ *Ref Code:* ${item.affiliateCode}\n`;
@@ -754,4 +765,4 @@ export default function Catalog() {
       </div>
     </div>
   );
-      }
+}
