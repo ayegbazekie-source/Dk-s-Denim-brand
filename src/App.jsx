@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { Toaster } from "@/components/ui/toaster"
-import { QueryClientProvider } from '@tanstack/react-query'
-import { queryClientInstance } from '@/lib/query-client'
+import { Toaster } from "@/components/ui/toaster";
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClientInstance } from '@/lib/query-client';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import PageNotFound from './pages/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -11,9 +11,10 @@ import Catalog from './pages/Catalog';
 import Affiliate from './pages/Affiliate';
 import Layout from './components/Layout';
 import Admin from './pages/Admin';
+import AdminAnalytics from './components/admin/AdminAnalytics'; // Standalone Analytics Component
 import { supabase } from '@/lib/supabase';
 
-// Helper component to track page views on route changes
+// Helper component to track page views on route changes with normalized lowercase paths
 const PageTracker = () => {
   const location = useLocation();
 
@@ -23,9 +24,15 @@ const PageTracker = () => {
 
     const logPageView = async () => {
       try {
+        // Clean URL path to prevent case duplication in analytics
+        let cleanPath = location.pathname.trim().toLowerCase();
+        if (cleanPath.length > 1 && cleanPath.endsWith('/')) {
+          cleanPath = cleanPath.slice(0, -1);
+        }
+
         await supabase.from('page_views').insert([
           {
-            page_path: location.pathname,
+            page_path: cleanPath,
             user_agent: navigator.userAgent,
           },
         ]);
@@ -73,7 +80,7 @@ const AuthenticatedApp = () => {
     }
   }
 
-  // Parse both formats safely
+  // Parse maintenance settings safely
   let isMaintenanceMode = false;
   if (Array.isArray(settings)) {
     const maintenanceRow = settings.find(item => item.key === 'maintenance_mode' || item.key === 'maintenance');
@@ -115,12 +122,19 @@ const AuthenticatedApp = () => {
     <>
       <PageTracker />
       <Routes>
+        {/* Main Storefront Routes */}
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/Catalog" element={<Catalog />} />
-          <Route path="/Affiliate" element={<Affiliate />} />
+          <Route path="/catalog" element={<Catalog />} />
+          <Route path="/earn" element={<Affiliate />} />
+          <Route path="/affiliate" element={<Affiliate />} />
         </Route>
-        <Route path="/Admin" element={<Admin />} />
+
+        {/* Admin Dashboard & Sub-routes */}
+        <Route path="/admin" element={<Admin />}>
+          <Route path="analytics" element={<AdminAnalytics />} />
+        </Route>
+
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </>
