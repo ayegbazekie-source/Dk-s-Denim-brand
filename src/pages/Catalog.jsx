@@ -30,10 +30,10 @@ import {
 import { supabase } from "@/lib/supabase";
 
 const CATEGORY_MAP = {
-  DENIM: ["ALL", "Jackets", "Jeans", "Cargo", "Shorts", "Jumpsuits"],
+  DENIM: ["ALL", "Jackets", "Jeans", "Cargo", "Shorts", "Caps"],
   NATIVE: ["ALL", "Senators", "Kaftans", "Jalabia", "Caps"],
   CORPORATE: ["ALL", "Trousers", "Shirts"],
-  PREMIUM: ["ALL", "Suits", "Bespoke Jackets"]
+  PREMIUM: ["ALL", "Full-stack Native", "Bespoke Denims", "Accessories"]
 };
 
 const AnimatedElement = ({ children, className, delay = 0 }) => {
