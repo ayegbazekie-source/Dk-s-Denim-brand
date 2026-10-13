@@ -13,11 +13,11 @@ const badgeColor = {
 
 // Multi-tier structural mapping config updated with PREMIUM and ACCESSORIES
 const CATEGORY_MAP = {
-  DENIM: ["Jackets", "Jeans", "Cargo", "Shorts", "Jumpsuits"],
+  DENIM: ["Jackets", "Jeans", "Cargo", "Shorts", "Caps"],
   NATIVE: ["Senators", "Kaftans", "Jalabia", "Caps"],
   CORPORATE: ["Trousers", "Shirts"],
-  PREMIUM: ["Full collection set"],
-  ACCESSORIES: ["Chain", "Necklace", "Diamonds", "Wristwatch", "Honorable sticks", "Shoes"]
+  PREMIUM: ["Full collection set", "Agbada", "Bespoke Denims"],
+  ACCESSORIES: ["Chain/Bracelet", "Necklace", "Cuff-link/Buttons", "Wristwatch", "Belt", "Shoes", "Caps"]
 };
 
 const initialFormState = {
