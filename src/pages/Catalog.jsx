@@ -33,7 +33,8 @@ const CATEGORY_MAP = {
   DENIM: ["ALL", "Jackets", "Jeans", "Cargo", "Shorts", "Caps"],
   NATIVE: ["ALL", "Senators", "Kaftans", "Jalabia", "Caps"],
   CORPORATE: ["ALL", "Trousers", "Shirts"],
-  PREMIUM: ["ALL", "Full-stack Native", "Bespoke Denims", "Accessories"]
+  PREMIUM: ["ALL", "Full collection set", "Agbada", "Bespoke Denims"],
+  ACCESSORIES: ["ALL", "Chain/Bracelet", "Necklace", "Cuff-link/Buttons", "Wristwatch", "Belt", "Shoes", "Caps"]
 };
 
 const AnimatedElement = ({ children, className, delay = 0 }) => {
@@ -62,7 +63,7 @@ export default function Catalog() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("DENIM");
   const [selectedSubcategory, setSelectedSubcategory] = useState("ALL");
-  const [sortBy, setSortBy] = useState("DEFAULT");
+  const [sortBy, setSortBy] = useState("LATEST");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeTab, setActiveTab] = useState("ready");
   
@@ -147,7 +148,7 @@ export default function Catalog() {
     async function fetchProducts() {
       try {
         setLoading(true);
-        const { data, error } = await supabase.from("products").select("*");
+        const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
         if (error) throw error;
         setProducts(data || []);
       } catch (err) {
@@ -272,8 +273,15 @@ export default function Catalog() {
     return matchS && matchC && matchSub;
   });
 
-  if (sortBy === "PRICE_LOW") filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-  if (sortBy === "PRICE_HIGH") filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+  if (sortBy === "LATEST") {
+    filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  } else if (sortBy === "OLDEST") {
+    filtered.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+  } else if (sortBy === "PRICE_LOW") {
+    filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
+  } else if (sortBy === "PRICE_HIGH") {
+    filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+  }
 
   return (
     <div className="bg-[#0F1E36] text-white min-h-screen pt-20 pb-16 px-3 sm:px-6 relative selection:bg-amber-500 selection:text-slate-950">
@@ -330,7 +338,8 @@ export default function Catalog() {
                 <SelectValue placeholder="Sort Layout" />
               </SelectTrigger>
               <SelectContent className="bg-[#16253D] border-slate-800 text-white">
-                <SelectItem value="DEFAULT">Default Ordering</SelectItem>
+                <SelectItem value="LATEST">Latest Uploads First</SelectItem>
+                <SelectItem value="OLDEST">Oldest Uploads First</SelectItem>
                 <SelectItem value="PRICE_LOW">Price: Low to High</SelectItem>
                 <SelectItem value="PRICE_HIGH">Price: High to Low</SelectItem>
               </SelectContent>
@@ -504,7 +513,7 @@ export default function Catalog() {
                                         <Label className="text-[10px] font-bold uppercase text-amber-400 flex items-center gap-1">
                                           <Shirt className="h-3 w-3" /> Garment Blueprint Manual
                                         </Label>
-                                        <p className="text-xs text-slate-300 leading-relaxed bg-[#091324] p-3 rounded-xl border border-slate-800/80">
+                                        <p className="text-xs text-slate-300 leading-relaxed bg-[#091324] p-3 rounded-xl border border-slate-800/80 whitespace-pre-line">
                                           {selectedProduct.description || "Masterly crafted piece built with premium structural finish and reinforced stitching."}
                                         </p>
                                       </div>
@@ -677,8 +686,7 @@ export default function Catalog() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Global Cart Sidebar Drawer */}
+            {/* Global Cart Sidebar Drawer */}
         {cartOpen && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
             <div className="w-full max-w-md bg-[#111F38] border-l border-slate-800 h-full flex flex-col shadow-2xl">
@@ -734,7 +742,7 @@ export default function Catalog() {
                     <span className="text-amber-400 font-black">₦{cartItems.reduce((s, i) => s + (i.price || 0) * i.qty, 0).toLocaleString()}</span>
                   </div>
                   
-                  {/* WHATSAPP CHECKOUT MESSAGE WITH INDIVIDUAL PRICES INCLUDED */}
+                                     {/* WHATSAPP CHECKOUT MESSAGE WITH INDIVIDUAL PRICES INCLUDED */}
                   <a 
                     href={`https://wa.me/2348163914835?text=${encodeURIComponent(
   `D-KADRIS BESPOKE ORDER\n-----------------------------------\n\n` +
@@ -765,4 +773,4 @@ export default function Catalog() {
       </div>
     </div>
   );
-}
+                                     }
