@@ -11,11 +11,13 @@ const badgeColor = {
   standard: "text-muted-foreground bg-muted border border-border",
 };
 
-// Multi-tier structural mapping config synced with Catalog updates
+// Multi-tier structural mapping config updated with PREMIUM and ACCESSORIES
 const CATEGORY_MAP = {
-  DENIM: ["Jackets", "Jeans", "Cargo", "Shorts"],
-  NATIVE: ["Senators", "Kaftans", "Jalabia", "Caps"], // Added 'Jalabia'
-  CORPORATE: ["Trousers", "Shirts", "Two-piece"]
+  DENIM: ["Jackets", "Jeans", "Cargo", "Shorts", "Jumpsuits"],
+  NATIVE: ["Senators", "Kaftans", "Jalabia", "Caps"],
+  CORPORATE: ["Trousers", "Shirts"],
+  PREMIUM: ["Full collection set"],
+  ACCESSORIES: ["Chain", "Necklace", "Diamonds", "Wristwatch", "Honorable sticks", "Shoes"]
 };
 
 const initialFormState = {
@@ -35,7 +37,10 @@ const initialFormState = {
   is_featured: false,
   is_new_arrival: false,
   care_instructions: "",
-  styling_recommendation: ""
+  styling_recommendation: "",
+  bundle_attire: "",
+  bundle_headwear: "",
+  bundle_footwear: ""
 };
 
 export default function AdminProducts() {
@@ -70,45 +75,38 @@ export default function AdminProducts() {
 
   useEffect(() => { load(); }, []);
 
-  // Safe reset for child rows on parent category shifts
   const handleCategoryFormChange = (newCategory) => {
     setFormData((prev) => ({
       ...prev,
       category: newCategory,
-      subcategory: "" // Safely strip old selections to prevent mapping cross-contamination
+      subcategory: ""
     }));
   };
 
-  // AUTOMATED PHONE GALLERY UPLOADER ROUTINE
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
       setUploadingImage(true);
-
-      // Create a unique file name to avoid collisions
       const fileExt = file.name.split(".").pop();
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
       const filePath = `product-catalog/${fileName}`;
 
-      // Upload file directly to the Supabase 'products' storage bucket
       const { error: uploadError } = await supabase.storage
         .from("products")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // Retrieve the public address/URL link of the asset
       const { data: { publicUrl } } = supabase.storage
         .from("products")
         .getPublicUrl(filePath);
 
-      // Save URL to the reactive product state engine
       setFormData((prev) => ({ ...prev, image_url: publicUrl }));
     } catch (err) {
       console.error("Storage upload exception:", err.message);
-      alert(`Gallery upload failed: ${err.message}\nMake sure a public storage bucket named 'products' exists in your Supabase panel.`);
+      alert(`Gallery upload failed: ${err.message}`);
     } finally {
       setUploadingImage(false);
     }
@@ -124,18 +122,20 @@ export default function AdminProducts() {
       stock: parseInt(formData.stock) || 0,
       category: formData.category,
       subcategory: formData.subcategory || null, 
-      fit_type: formData.fit_type || null,
-      fabric: formData.fabric || null,
-      stretch_level: formData.stretch_level || null,
+      fit_type: formData.category === "ACCESSORIES" ? null : (formData.fit_type || null),
+      fabric: formData.category === "ACCESSORIES" ? null : (formData.fabric || null),
+      stretch_level: formData.category === "ACCESSORIES" ? null : (formData.stretch_level || null),
       image_url: formData.image_url || null,
-      description: formData.description || null,
-      sizes: formData.sizes ? formData.sizes.split(",").map(s => s.trim()) : [],
-      colors: formData.colors ? formData.colors.split(",").map(c => c.trim()) : [],
+      description: formData.category === "PREMIUM" 
+        ? `${formData.description || ""}\n\nBUNDLE INCLUDES:\nAttire: ${formData.bundle_attire || "—"}\nHeadwear: ${formData.bundle_headwear || "—"}\nFootwear: ${formData.bundle_footwear || "—"}`.trim()
+        : (formData.description || null),
+      sizes: formData.category === "ACCESSORIES" ? [] : (formData.sizes ? formData.sizes.split(",").map(s => s.trim()) : []),
+      colors: formData.sizes ? formData.colors.split(",").map(c => c.trim()) : [],
       tags: formData.tags ? formData.tags.split(",").map(t => t.trim()) : [],
       is_featured: formData.is_featured,
       is_new_arrival: formData.is_new_arrival,
       care_instructions: formData.care_instructions || null,
-      styling_recommendation: formData.styling_recommendation || null,
+      styling_recommendation: formData.category === "ACCESSORIES" ? null : (formData.styling_recommendation || null),
       updated_at: new Date().toISOString()
     };
 
@@ -184,7 +184,10 @@ export default function AdminProducts() {
       is_featured: product.is_featured || false,
       is_new_arrival: product.is_new_arrival || false,
       care_instructions: product.care_instructions || "",
-      styling_recommendation: product.styling_recommendation || ""
+      styling_recommendation: product.styling_recommendation || "",
+      bundle_attire: "",
+      bundle_headwear: "",
+      bundle_footwear: ""
     });
     setIsFormOpen(true);
   };
@@ -209,7 +212,6 @@ export default function AdminProducts() {
 
   return (
     <div className="space-y-4">
-      {/* Top Bar Actions */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -228,7 +230,6 @@ export default function AdminProducts() {
         </Button>
       </div>
 
-      {/* Main Table Interface with touch responsive sliding support */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="w-full overflow-x-auto [webkit-overflow-scrolling:touch]">
           <table className="w-full text-sm min-w-[800px] table-auto">
@@ -295,7 +296,6 @@ export default function AdminProducts() {
         </div>
       </div>
 
-      {/* RENDER FORM DOCK POPUP */}
       <Dialog open={isFormOpen} onOpenChange={(open) => setIsFormOpen(open)}>
         <DialogContent className="bg-card border-border text-card-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -319,7 +319,6 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            {/* Structured Multi-tier Layout Row Input Fields with Aligned h-11 heights */}
             <div className="grid grid-cols-2 gap-4 items-end">
               <div className="space-y-1.5 flex flex-col justify-end">
                 <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block">Main Category</label>
@@ -330,7 +329,7 @@ export default function AdminProducts() {
                   className="w-full h-11 px-3 bg-muted border border-border rounded-xl text-sm text-card-foreground focus:outline-none font-bold cursor-pointer transition-all hover:bg-muted/80"
                 >
                   <option value="" disabled>Select Parent...</option>
-                  {['DENIM', 'NATIVE', 'CORPORATE'].map(cat => (
+                  {['DENIM', 'NATIVE', 'CORPORATE', 'PREMIUM', 'ACCESSORIES'].map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
@@ -353,23 +352,46 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Fit Type</label>
-                <Input value={formData.fit_type} onChange={e => setFormData({...formData, fit_type: e.target.value})} placeholder="Slim Fit, Regular, Boxy" className="bg-muted border-border" />
+            {/* CONDITIONAL EXTRA INPUTS FOR PREMIUM BUNDLE */}
+            {formData.category === "PREMIUM" && (
+              <div className="bg-muted/40 border border-border rounded-xl p-4 space-y-3">
+                <p className="text-xs font-black uppercase tracking-wider text-amber-400">Bundle Includes Setup</p>
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wide block mb-1">Attire</label>
+                  <Input value={formData.bundle_attire} onChange={e => setFormData({...formData, bundle_attire: e.target.value})} placeholder="e.g. Custom Embroidered Kaftan" className="bg-muted border-border text-xs" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wide block mb-1">Headwear</label>
+                  <Input value={formData.bundle_headwear} onChange={e => setFormData({...formData, bundle_headwear: e.target.value})} placeholder="e.g. Matching Aso-Oke Fila" className="bg-muted border-border text-xs" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wide block mb-1">Footwear</label>
+                  <Input value={formData.bundle_footwear} onChange={e => setFormData({...formData, bundle_footwear: e.target.value})} placeholder="e.g. Handcrafted Leather Slides" className="bg-muted border-border text-xs" />
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Fabric</label>
-                <Input value={formData.fabric} onChange={e => setFormData({...formData, fabric: e.target.value})} placeholder="Raw Denim, Suiting Fabric" className="bg-muted border-border" />
-              </div>
-            </div>
+            )}
 
-            <div>
-              <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Stretch Level</label>
-              <Input value={formData.stretch_level} onChange={e => setFormData({...formData, stretch_level: e.target.value})} placeholder="Non-Stretch, Medium Stretch" className="bg-muted border-border" />
-            </div>
+            {/* CONDITIONAL EXTRA FIELDS HIDDEN FOR ACCESSORIES */}
+            {formData.category !== "ACCESSORIES" && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Fit Type</label>
+                    <Input value={formData.fit_type} onChange={e => setFormData({...formData, fit_type: e.target.value})} placeholder="Slim Fit, Regular, Boxy" className="bg-muted border-border" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Fabric</label>
+                    <Input value={formData.fabric} onChange={e => setFormData({...formData, fabric: e.target.value})} placeholder="Raw Denim, Suiting Fabric" className="bg-muted border-border" />
+                  </div>
+                </div>
 
-            {/* GALLERIES UPLOADER BUTTON COMPONENT */}
+                <div>
+                  <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Stretch Level</label>
+                  <Input value={formData.stretch_level} onChange={e => setFormData({...formData, stretch_level: e.target.value})} placeholder="Non-Stretch, Medium Stretch" className="bg-muted border-border" />
+                </div>
+              </>
+            )}
+
             <div>
               <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Product Media Image</label>
               <div className="flex gap-2">
@@ -382,7 +404,7 @@ export default function AdminProducts() {
                   )}
                 </div>
                 <label className="h-10 px-4 rounded-md bg-muted border border-border flex items-center justify-center gap-2 text-xs font-bold cursor-pointer hover:bg-muted/70 text-card-foreground shrink-0 transition-colors">
-                  {uploadingImage ? (
+            {uploadingImage ? (
                     <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   ) : (
                     <Upload className="h-4 w-4" />
@@ -398,19 +420,21 @@ export default function AdminProducts() {
               <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Provide structural styling details..." className="w-full h-20 p-3 bg-muted border border-border rounded-md text-sm text-card-foreground focus:outline-none" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Sizes (Comma-Separated)</label>
-                <Input value={formData.sizes} onChange={e => setFormData({...formData, sizes: e.target.value})} placeholder="30, 32, 34, M, L, XL" className="bg-muted border-border" />
+            {formData.category !== "ACCESSORIES" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Sizes (Comma-Separated)</label>
+                  <Input value={formData.sizes} onChange={e => setFormData({...formData, sizes: e.target.value})} placeholder="30, 32, 34, M, L, XL" className="bg-muted border-border" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Colors (Comma-Separated)</label>
+                  <Input value={formData.colors} onChange={e => setFormData({...formData, colors: e.target.value})} placeholder="Black, Indigo, Blue" className="bg-muted border-border" />
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Colors (Comma-Separated)</label>
-                <Input value={formData.colors} onChange={e => setFormData({...formData, colors: e.target.value})} placeholder="Black, Indigo, Blue" className="bg-muted border-border" />
-              </div>
-            </div>
+            )}
 
             <div>
-            <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Tags (Comma-Separated)</label>
+              <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Tags (Comma-Separated)</label>
               <Input value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} placeholder="featured, new-arrival" className="bg-muted border-border" />
             </div>
 
@@ -430,10 +454,12 @@ export default function AdminProducts() {
               <Input value={formData.care_instructions} onChange={e => setFormData({...formData, care_instructions: e.target.value})} placeholder="Machine wash cold, turn inside out" className="bg-muted border-border" />
             </div>
 
-            <div>
-              <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Styling Recommendation</label>
-              <Input value={formData.styling_recommendation} onChange={e => setFormData({...formData, styling_recommendation: e.target.value})} placeholder="Pairs best with D-Kadris Pieces" className="bg-muted border-border" />
-            </div>
+            {formData.category !== "ACCESSORIES" && (
+              <div>
+                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wide block mb-1">Styling Recommendation</label>
+                <Input value={formData.styling_recommendation} onChange={e => setFormData({...formData, styling_recommendation: e.target.value})} placeholder="Pairs best with D-Kadris Pieces" className="bg-muted border-border" />
+              </div>
+            )}
 
             <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
               <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} className="rounded-full font-bold">Cancel</Button>
@@ -445,7 +471,6 @@ export default function AdminProducts() {
         </DialogContent>
       </Dialog>
 
-      {/* Specifications Inspect View Drawer */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
         <DialogContent className="bg-card border-border text-card-foreground max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="font-black text-xl">Product Specifications</DialogTitle></DialogHeader>
